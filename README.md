@@ -1,2 +1,2 @@
-# hybridAI
-Hybrid and Neuro-Symbolic Al @ HSG
+# EvoSym
+Hybrid and Neuro-Symbolic Al Course @ HSG
