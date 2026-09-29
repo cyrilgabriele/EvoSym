@@ -1,13 +1,13 @@
 """Run the 17 TA test queries against the knowledge base.
 
-Queries are read verbatim from hackathon01/HA1_FrameX_SBB_Test_Queries.md, so
+Queries are read verbatim from docs/hackathon01/HA1_FrameX_SBB_Test_Queries.md, so
 the knowledge base must use the TA vocabulary (sp_<UIC>, atStopPoint, ...).
 Expected answers come from scripts/build_expected.py, which reads the raw SBB
 data independently of ingestion and rules. Run with:
 
     PYTHONPATH=src uv run python -m unittest tests.test_questions
 
-Loads every .fx file under kb/ (override with FRAMEX_KB=path).
+Loads every .fx file under src/knowledge_base/ (override with FRAMEX_KB=path).
 """
 
 from __future__ import annotations
@@ -22,9 +22,9 @@ from framex import Client
 
 
 ROOT = Path(__file__).resolve().parents[1]
-KB = Path(os.environ.get("FRAMEX_KB", ROOT / "kb"))
+KB = Path(os.environ.get("FRAMEX_KB", ROOT / "src" / "knowledge_base"))
 EXPECTED = json.loads((ROOT / "tests" / "expected.json").read_text())
-QUERY_FILE = ROOT / "hackathon01" / "HA1_FrameX_SBB_Test_Queries.md"
+QUERY_FILE = ROOT / "docs" / "hackathon01" / "HA1_FrameX_SBB_Test_Queries.md"
 
 # The variables each test compares; the rest (names, internal IDs) are ignored.
 COMPARED = {

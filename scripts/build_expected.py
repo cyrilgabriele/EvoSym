@@ -2,7 +2,7 @@
 
 This is the test oracle. It reads raw SBB data and never touches FrameX, the
 ingestion script or the rules, so a bug there cannot hide in the expected answers.
-Writes tests/expected.json, keyed by query id (see hackathon01/HA1_FrameX_SBB_Test_Queries.md).
+Writes tests/expected.json, keyed by query id (see docs/hackathon01/HA1_FrameX_SBB_Test_Queries.md).
 
 Each answer is a sorted list of rows, one row per expected binding, holding only
 the variables the test compares. Stations are UIC numbers, numbers are floats.
