@@ -1,12 +1,5 @@
 [project]
 name = "evosym"
 version = "0.1.0"
-description = "Add your description here"
-readme = "README.md"
-authors = [
-    { name = "Cyril Gabriele", email = "cyril.gabriele@gmail.com" }
-]
-requires-python = ">=3.14"
-dependencies = [
-    "pydantic>=2.13.5",
-]
+requires-python = ">=3.12"
+dependencies = []
