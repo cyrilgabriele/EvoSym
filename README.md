@@ -1,15 +1,16 @@
 # EvoSym - Evolvable Neuro-Symbolic Intelligence
 Hybrid and Neuro-Symbolic Al Course @ HSG
 
-## FrameX Workbench
+## FrameX
 
 The [official FrameX documentation](https://unisg-ics-dsnlp.github.io/FrameX-Doc/index.html) is the source of truth for FrameX syntax, APIs, and behavior.
 
-Set these two values in the root `.env` using your course Workbench credentials:
+The team uses the locally installed FrameX CLI for `.fx` programs. From the project root, verify the installation and run a program with:
 
-```dotenv
-FRAME_X_WORKBENCH_USERNAME=your_username
-FRAME_X_WORKBENCH_PASSWORD=your_password
+```sh
+framex --version
+framex check path/to/program.fx
+framex run path/to/program.fx
 ```
 
-Run `.fx` and Python programs in the hosted course Workbench with the reusable helper. See [FrameX Workbench setup](docs/FRAME_X_WORKBENCH.md) for commands and credential setup. No local FrameX package or binary is required for this path.
+Version 0.4.3 is verified on the development machine. See [local FrameX setup](docs/FRAME_X_LOCAL.md) for installation and troubleshooting. For Python client code, use the separate [hosted Workbench workflow](docs/FRAME_X_WORKBENCH.md).
