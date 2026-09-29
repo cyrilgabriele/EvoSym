@@ -11,6 +11,20 @@ Run the project entry point with `uv` from the repository root:
 uv run python src/main.py
 ```
 
+## Tests
+
+The tests run the 17 TA test queries in `docs/hackathon01/HA1_FrameX_SBB_Test_Queries.md` against every `.fx` file in `src/knowledge_base/`. Code lives in a flat `src/` folder, so commands started from the repository root need `PYTHONPATH=src` to import `framex`:
+
+```sh
+PYTHONPATH=src uv run python -m unittest tests.test_questions
+```
+
+Expected answers in `tests/expected.json` come from the raw SBB data, independent of the knowledge base. The train-run dataset only holds the previous day, so regenerate them right after ingesting new data:
+
+```sh
+uv run python scripts/build_expected.py
+```
+
 The team uses the locally installed FrameX CLI for `.fx` programs. From the project root, verify the installation and run a program with:
 
 ```sh
