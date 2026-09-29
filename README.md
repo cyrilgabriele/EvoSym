@@ -3,6 +3,8 @@ Hybrid and Neuro-Symbolic Al Course @ HSG
 
 ## FrameX Workbench
 
+The [official FrameX documentation](https://unisg-ics-dsnlp.github.io/FrameX-Doc/index.html) is the source of truth for FrameX syntax, APIs, and behavior.
+
 Set these two values in the root `.env` using your course Workbench credentials:
 
 ```dotenv
