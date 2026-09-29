@@ -5,6 +5,12 @@ Hybrid and Neuro-Symbolic Al Course @ HSG
 
 The [official FrameX documentation](https://unisg-ics-dsnlp.github.io/FrameX-Doc/index.html) is the source of truth for FrameX syntax, APIs, and behavior.
 
+Run the project entry point with `uv` from the repository root:
+
+```sh
+uv run python src/main.py
+```
+
 The team uses the locally installed FrameX CLI for `.fx` programs. From the project root, verify the installation and run a program with:
 
 ```sh
