@@ -42,10 +42,6 @@ def uic(value) -> int | None:
     return None if value is None else int(float(value))
 
 
-def is_swiss(station: int) -> bool:
-    return str(station).startswith("85")
-
-
 def rows(values) -> list[list]:
     return sorted(list(v) if isinstance(v, tuple) else [v] for v in values)
 
@@ -68,11 +64,16 @@ def canton(stations: dict[int, dict], code: str) -> set[int]:
 def passenger_counts() -> dict[tuple[int, int], float]:
     """(station, year) -> DTV, the average daily boardings plus alightings over all days."""
     counts = export("passagierfrequenz")
-    return {
-        (uic(c["uic"]), int(c["jahr_annee_anno"][:4])): float(c["dtv_tjm_tgm"])
-        for c in counts
-        if c["uic"] is not None and c["dtv_tjm_tgm"] is not None
-    }
+    result = {}
+    for c in counts:
+        if c["uic"] is None or c["dtv_tjm_tgm"] is None or c["jahr_annee_anno"] is None:
+            continue
+        key = (uic(c["uic"]), int(c["jahr_annee_anno"][:4]))
+        value = float(c["dtv_tjm_tgm"])
+        if key in result and result[key] != value:
+            raise ValueError(f"Conflicting passenger observations for {key}; review before updating expectations")
+        result[key] = value
+    return result
 
 
 def real_stops() -> tuple[list[str], list[dict]]:

@@ -255,7 +255,7 @@ def build_passenger_counts(rows, scope):
     conflicts = sum(1 for vs in values.values() if len(vs) > 1)
     years = sorted({year for _, year in values})
     notes = ["observedFrequency(Year) = DTV (dtv_tjm_tgm): average people boarding plus "
-             "alighting per day over all weekdays.",
+             "alighting per day over all days of the week.",
              f"Years: {', '.join(years)}. Stop point/year pairs with conflicting values: {conflicts}."]
     return facts, notes + dropped.note()
 
