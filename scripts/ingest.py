@@ -101,24 +101,32 @@ def member(obj: str, cls: str) -> str:
 
 
 class Dropped:
-    """Collects rows outside the scope so each fact file can say what it left out."""
+    """Collects rows the script leaves out so each fact file can say what it left out."""
 
     def __init__(self) -> None:
         self.rows = 0
-        self.names: dict[int | None, str] = {}
+        self.names: dict[int, str] = {}
+        self.unnumbered: list[str] = []
 
     def add(self, number: int | None, name) -> None:
+        if number is None:
+            self.unnumbered.append(str(name))
+            return
         self.rows += 1
         self.names.setdefault(number, str(name))
 
     def note(self) -> list[str]:
+        notes = []
+        if self.unnumbered:
+            notes += [f"Dropped {len(self.unnumbered)} rows without a stop-point number:",
+                      "  " + "; ".join(sorted(self.unnumbered))]
         if not self.rows:
-            return ["No rows outside the scope."]
+            return notes or ["No rows outside the scope."]
         names = sorted(set(self.names.values()))
-        more = f", ... (+{len(names) - MAX_EXAMPLES})" if len(names) > MAX_EXAMPLES else ""
-        return [f"Dropped {self.rows} rows at {len(self.names)} stop points outside the scope "
-                f"(not a Swiss passenger rail stop point in Didok):",
-                "  " + ", ".join(names[:MAX_EXAMPLES]) + more]
+        more = f"; ... (+{len(names) - MAX_EXAMPLES})" if len(names) > MAX_EXAMPLES else ""
+        return notes + [f"Dropped {self.rows} rows at {len(self.names)} stop points outside the "
+                        f"scope (not a Swiss passenger rail stop point in Didok):",
+                        "  " + "; ".join(names[:MAX_EXAMPLES]) + more]
 
 
 # --- one builder per dataset -------------------------------------------------------
@@ -157,7 +165,7 @@ def build_wifi(rows, scope):
         else:
             dropped.add(n, r["standort"])
     facts = [fact(sp(n), "hasWifi", "true") for n in sorted(stations)]
-    notes = [f"{len(rows)} rows -> {len(stations)} stop points with WiFi (duplicates merged).",
+    notes = [f"{len(rows)} rows -> {len(stations)} stop points with WiFi.",
              "Open world: a missing row does not mean the station has no WiFi."]
     return facts, notes + dropped.note()
 
