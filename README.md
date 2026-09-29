@@ -34,3 +34,11 @@ framex run path/to/program.fx
 ```
 
 Version 0.4.3 is verified on the development machine. See [local FrameX setup](docs/FRAME_X_LOCAL.md) for installation and troubleshooting. For Python client code, use the separate [hosted Workbench workflow](docs/FRAME_X_WORKBENCH.md).
+
+## Open world
+
+We use the open-world assumption because this is a real-world dataset and we cannot ensure that no data is missing, so a missing fact means unknown, not false.
+
+## Coding agents
+
+Gian used Claude with the models Opus 5.5 and Fable 5.1 for the tests and the expected-answer script.
