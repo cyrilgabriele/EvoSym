@@ -7,7 +7,8 @@ data independently of ingestion and rules. Run with:
 
     PYTHONPATH=src uv run python -m unittest tests.test_questions
 
-Loads every .fx file under src/knowledge_base/ (override with FRAMEX_KB=path).
+Loads every .fx file under data/facts/ (from scripts/ingest.py) and src/knowledge_base/
+(ontology and rules). Override with FRAMEX_KB=dir1:dir2.
 """
 
 from __future__ import annotations
@@ -22,7 +23,12 @@ from framex import Client
 
 
 ROOT = Path(__file__).resolve().parents[1]
-KB = Path(os.environ.get("FRAMEX_KB", ROOT / "src" / "knowledge_base"))
+KB_DIRS = [
+    Path(d)
+    for d in os.environ.get(
+        "FRAMEX_KB", f"{ROOT / 'data' / 'facts'}{os.pathsep}{ROOT / 'src' / 'knowledge_base'}"
+    ).split(os.pathsep)
+]
 EXPECTED = json.loads((ROOT / "tests" / "expected.json").read_text())
 QUERY_FILE = ROOT / "docs" / "hackathon01" / "HA1_FrameX_SBB_Test_Queries.md"
 
@@ -67,9 +73,9 @@ def value(raw: str):
 
 
 def load_kb() -> Client:
-    files = sorted(KB.rglob("*.fx"))
+    files = sorted(f for d in KB_DIRS for f in d.rglob("*.fx"))
     if not files:
-        raise FileNotFoundError(f"no .fx files under {KB}")
+        raise FileNotFoundError(f"no .fx files under {KB_DIRS}")
     client = Client(retain_transcript=False, request_timeout=300)
     client.load_program(source="\n".join(f.read_text() for f in files))
     return client
