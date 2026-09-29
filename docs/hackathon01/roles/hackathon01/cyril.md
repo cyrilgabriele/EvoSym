@@ -8,4 +8,4 @@
 
 ## Done when
 
-All 18 questions in `docs/hackathon01/HA1_FrameX_SBB_Test_Queries.md` run against a small, hand-written sample of facts before using the real data.
+All 18 questions in `docs/hackathon01/HA1_FrameX_SBB_Test_Queries.pdf` run against a small, hand-written sample of facts before using the real data.

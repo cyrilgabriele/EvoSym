@@ -1,8 +1,8 @@
-"""Compute expected answers for the 17 TA test queries straight from the SBB API.
+"""Compute expected answers for all 18 questions from cached raw SBB exports.
 
 This is the test oracle. It reads raw SBB data and never touches FrameX, the
 ingestion script or the rules, so a bug there cannot hide in the expected answers.
-Writes tests/expected.json, keyed by query id (see docs/hackathon01/HA1_FrameX_SBB_Test_Queries.md).
+Writes tests/expected.json, keyed by the question IDs in the PDF.
 
 Each answer is a sorted list of rows, one row per expected binding, holding only
 the variables the test compares. Stations are UIC numbers, numbers are floats.
@@ -12,13 +12,14 @@ Run it from the same data snapshot as the ingestion: train runs change daily.
 from __future__ import annotations
 
 import json
-import urllib.parse
-import urllib.request
+import hashlib
+from datetime import datetime
+from functools import cache
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-API = "https://data.sbb.ch/api/explore/v2.1/catalog/datasets"
+RAW = ROOT / "data" / "raw"
 OUT = ROOT / "tests" / "expected.json"
 
 CHUR = 8509000
@@ -31,13 +32,9 @@ LONG_DISTANCE = {"EC", "IC", "ICE", "IR", "NJ", "RJ", "RJX", "TGV"}
 STANDING_HALL = {"BESTEHEND", "PROJEKTIERT ABBRUCH"}
 
 
-def export(dataset: str, select: str, where: str | None = None) -> list[dict]:
-    params = {"select": select}
-    if where:
-        params["where"] = where
-    url = f"{API}/{dataset}/exports/json?{urllib.parse.urlencode(params)}"
-    with urllib.request.urlopen(url, timeout=300) as response:
-        return json.load(response)
+@cache
+def export(dataset: str) -> list[dict]:
+    return json.loads((RAW / f"{dataset}.json").read_text())
 
 
 def uic(value) -> int | None:
@@ -55,15 +52,12 @@ def rows(values) -> list[list]:
 
 def train_stations() -> dict[int, dict]:
     """Swiss service points with train service: the scope of the whole system."""
-    points = export(
-        "dienststellen-gemass-opentransportdataswiss",
-        "number,cantonabbreviation,meansoftransport",
-        'isocountrycode="CH"',
-    )
+    points = export("dienststellen-gemass-opentransportdataswiss")
     return {
         uic(p["number"]): p
         for p in points
-        if "TRAIN" in (p["meansoftransport"] or "").split("|")
+        if p["isocountrycode"] == "CH" and p["stoppoint"] in (True, "true")
+        and {"TRAIN", "RACK_RAILWAY"} & set((p["meansoftransport"] or "").split("|"))
     }
 
 
@@ -73,7 +67,7 @@ def canton(stations: dict[int, dict], code: str) -> set[int]:
 
 def passenger_counts() -> dict[tuple[int, int], float]:
     """(station, year) -> DTV, the average daily boardings plus alightings over all days."""
-    counts = export("passagierfrequenz", "uic,jahr_annee_anno,dtv_tjm_tgm")
+    counts = export("passagierfrequenz")
     return {
         (uic(c["uic"]), int(c["jahr_annee_anno"][:4])): float(c["dtv_tjm_tgm"])
         for c in counts
@@ -81,70 +75,64 @@ def passenger_counts() -> dict[tuple[int, int], float]:
     }
 
 
-def real_stops() -> tuple[str, list[dict]]:
+def real_stops() -> tuple[list[str], list[dict]]:
     """Stops where a train actually halted: no pass-throughs, no cancellations."""
-    runs = export(
-        "ist-daten-sbb",
-        "betriebstag,fahrt_bezeichner,bpuic,verkehrsmittel_text,"
-        "ankunftszeit,abfahrtszeit,durchfahrt_tf,faellt_aus_tf",
-    )
+    runs = export("ist-daten-sbb")
     days = {r["betriebstag"] for r in runs}
-    assert len(days) == 1, f"expected one operating day, got {days}"
     stops = [
-        r
+        dict(r)
         for r in runs
-        if r["bpuic"] is not None and not r["durchfahrt_tf"] and not r["faellt_aus_tf"]
+        if not r["durchfahrt_tf"] and not r["faellt_aus_tf"]
     ]
     for s in stops:
         s["bpuic"] = uic(s["bpuic"])
-    return days.pop(), stops
+    return sorted(days), stops
 
 
-def non_stop_pairs(stops: list[dict]) -> set[tuple[int, int]]:
+def non_stop_pairs(stops: list[dict], stations: dict) -> set[tuple[int, int]]:
     """Consecutive real stops of one run, both in Switzerland."""
-    runs: dict[str, list[dict]] = {}
+    runs = {}
     for s in stops:
-        runs.setdefault(s["fahrt_bezeichner"], []).append(s)
+        runs.setdefault((s["betriebstag"], s["fahrt_bezeichner"]), []).append(s)
     pairs = set()
     for run in runs.values():
         # The first stop has no arrival time, the last no departure time.
-        run.sort(key=lambda s: s["ankunftszeit"] or s["abfahrtszeit"])
+        run = list({(s['bpuic'], s['ankunftszeit'], s['abfahrtszeit']): s for s in run}.values())
+        run.sort(key=lambda s: datetime.fromisoformat(s["ankunftszeit"] or s["abfahrtszeit"]))
         for here, there in zip(run, run[1:]):
-            if is_swiss(here["bpuic"]) and is_swiss(there["bpuic"]):
+            if here["bpuic"] in stations and there["bpuic"] in stations:
                 pairs.add((here["bpuic"], there["bpuic"]))
     return pairs
 
 
 def main() -> None:
     stations = train_stations()
-    day, stops = real_stops()
-    counts = passenger_counts()
-    pairs = non_stop_pairs(stops)
-    wifi = {uic(w["bpuic"]) for w in export("wifistation", "bpuic")} - {None}
+    days, stops = real_stops()
+    counts = {key: val for key, val in passenger_counts().items() if key[0] in stations}
+    pairs = non_stop_pairs(stops, stations)
+    wifi = {uic(w["bpuic"]) for w in export("wifistation")} - {None}
     halls = [
         (uic(h["bpuic"]), h["status"])
-        for h in export("haltestelle-wartehallen", "bpuic,status")
+        for h in export("haltestelle-wartehallen")
         if uic(h["bpuic"]) in stations
     ]
     lines: dict[int, set[str]] = {}
-    for op in export("linie-mit-betriebspunkten", "bpuic,linie"):
+    for op in export("linie-mit-betriebspunkten"):
         if uic(op["bpuic"]) in stations:
             lines.setdefault(uic(op["bpuic"]), set()).add(str(op["linie"]))
     long_distance = {
         s["bpuic"]
         for s in stops
-        if s["verkehrsmittel_text"] in LONG_DISTANCE and is_swiss(s["bpuic"])
+        if s["verkehrsmittel_text"] in LONG_DISTANCE and s["bpuic"] in stations
     }
 
-    zh_platforms = export("perron", "p_lange", f"bpuic={ZUERICH_HB}")
-    bern_platforms = export("perron", "p_nr,p_lange", f"bpuic={BERN}")
-    boards = export(
-        "sektortafel", "sektor_vorderseite", f'bpuic={ZUERICH_HB} and kundengleisnummer="3"'
-    )
+    zh_platforms = [p for p in export("perron") if uic(p["bpuic"]) == ZUERICH_HB and p["p_lange"] is not None]
+    bern_platforms = [p for p in export("perron") if uic(p["bpuic"]) == BERN and p["p_lange"] is not None]
+    boards = [b for b in export("sektortafel") if uic(b["bpuic"]) == ZUERICH_HB and b["kundengleisnummer"] == "3" and b["sektor_vorderseite"]]
     gr, ti, be, zh = (canton(stations, c) for c in ("GR", "TI", "BE", "ZH"))
 
     expected = {
-        "operating_day": day,
+        "operating_days": days,
         # Level 1
         "1.1": [["true"]] if CHUR in wifi else [],
         "1.2": rows(float(p["p_lange"]) for p in zh_platforms),
@@ -176,14 +164,22 @@ def main() -> None:
         ),
         "3.3": rows({b for a, b in pairs if a == ZUERICH_HB and b in long_distance}),
         "3.4": rows(
-            {s["bpuic"] for s in stops if s["verkehrsmittel_text"] == "TGV" and is_swiss(s["bpuic"])}
+            {s["bpuic"] for s in stops if s["verkehrsmittel_text"] == "TGV" and s["bpuic"] in stations}
         ),
         "3.5": rows(
-            s for s, p in stations.items() if "TRAM" in p["meansoftransport"].split("|")
+            s for s, p in stations.items() if {"TRAIN", "TRAM"} <= set(p["meansoftransport"].split("|"))
         ),
     }
+    datasets = {
+        "stations": "dienststellen-gemass-opentransportdataswiss", "wifi": "wifistation",
+        "platforms": "perron", "waiting_halls": "haltestelle-wartehallen",
+        "sector_boards": "sektortafel", "passenger_counts": "passagierfrequenz",
+        "line_stops": "linie-mit-betriebspunkten", "lines": "linie", "train_runs": "ist-daten-sbb",
+    }
+    expected["raw_sha256"] = {name: hashlib.sha256((RAW / f"{dataset}.json").read_bytes()).hexdigest()
+                              for name, dataset in datasets.items()}
     OUT.write_text(json.dumps(expected, indent=1, ensure_ascii=False) + "\n")
-    print(f"wrote {OUT.relative_to(ROOT)} for operating day {day}")
+    print(f"wrote {OUT.relative_to(ROOT)} for operating days {days}")
 
 
 if __name__ == "__main__":

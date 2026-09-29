@@ -2,7 +2,7 @@
 
 ## Goal and current state
 
-Answer all 18 questions in [the question sheet](docs/hackathon01/HA1_FrameX_SBB_Test_Queries.md): first with a small, hand-written FrameX sample, then with the downloaded SBB data.
+Answer all 18 questions in [the question sheet](docs/hackathon01/HA1_FrameX_SBB_Test_Queries.pdf): first with a small, hand-written FrameX sample, then with the downloaded SBB data.
 
 The nine SBB JSON exports are already in `data/raw/`. They are local, Git-ignored snapshots. `scripts/ingest.py` already downloads and converts them into `data/facts/*.fx`, but its mappings and output have not yet been accepted as correct. Treat that script as an adapter to audit and improve. `src/knowledge_base/ontology.fx` and `rules.fx` are empty; `src/main.py` still runs a Socrates example. No extra Python dependency is currently declared.
 

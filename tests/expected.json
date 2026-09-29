@@ -1,5 +1,7 @@
 {
- "operating_day": "2026-09-28",
+ "operating_days": [
+  "2026-09-28"
+ ],
  "1.1": [
   [
    "true"
@@ -425,5 +427,16 @@
   [
    8591429
   ]
- ]
+ ],
+ "raw_sha256": {
+  "stations": "a9c28eb9854d207275070122d0a1d60cbfb6f0fd605d2f752a01b9e872d88589",
+  "wifi": "e9cfd3e04f64b50a322dd36879c6d34b1a5ec0b4944c7fca0dab63406a24f38d",
+  "platforms": "636dcb54436996d1c91f53d6df31fdcca6f04a90d4dab1a3672e627312c72dc2",
+  "waiting_halls": "301130ea3faf3fd8dba41157a4147286e7be4a90fec862a017cd3abfa63f4eb4",
+  "sector_boards": "8ca26a1d16aeee63aae403cda50c10d22a03fac4a792ad012ff956803b57454c",
+  "passenger_counts": "fd32f563c2a0312084dce6bfbd52699476a4103fd4f7e812133cd07341619166",
+  "line_stops": "6259cd8a63fc2386fda3c4266009e9e6bfe909c2d96d1f27764e0544981d4a62",
+  "lines": "9bd509da321a2c2f5c0619f43ee338e85facb45ec748350ddea515724882a401",
+  "train_runs": "a869cb40aa61ab91da2f130857e795c1b1aa33f55fae4b85a89dbbd4d30d745a"
+ }
 }
