@@ -7,6 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from src.framex import Client
 from src.queries import QUESTIONS
 from src.runner import ROOT, inputs, load_client, schema_failures
 
@@ -80,6 +81,53 @@ class SampleQuestions(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             with self.assertRaisesRegex(FileNotFoundError, "scripts/ingest.py"):
                 inputs("sbb", directory)
+
+
+class Counterfactuals(unittest.TestCase):
+    """Remove the evidence behind a true conclusion; the conclusion must not survive.
+
+    Each case edits one sample fact. Under the open world, the conclusion must become
+    unknown, not false. The check that the goal is true beforehand keeps a broken
+    rule or a typo in the goal from passing as unknown.
+    """
+
+    CASES = (
+        # (goal, text in sample_facts.fx, replacement)
+        ("sp_8509000[hasWifi -> true]", "hasWifi -> true; servedByLine", "servedByLine"),
+        ("sp_8509000:Junction", "\n    servedByLine -> line_920;", ""),
+        ("platform_bern_long:LongPlatform", "platformLength -> 321.0", "platformLength -> 320.0"),
+        ("sp_8507000[nonStopTo -> sp_8503000]", "; nextStop -> event_ic_2", ""),
+        ('sp_8503000[servedByCategory -> "TGV"]', "event_tgv:StopEvent[ofRun -> run_tgv; ",
+         "event_tgv:StopEvent["),
+        ("sp_8507000:LongDistanceStation", 'category -> "IC"', 'category -> "S"'),
+        ('sp_8505300[busyIn("2025") -> true]', 'observedFrequency("2025") -> 20001.0',
+         'observedFrequency("2025") -> 20000.0'),
+        ("sp_8509000[hasWaitingHall -> true]", 'sp_8509000; status -> "BESTEHEND"',
+         'sp_8509000; status -> "PROJEKTIERT NEU"'),
+        ("sp_8503000[hasWaitingHall -> true]", 'sp_8503000; status -> "PROJEKTIERT ABBRUCH"',
+         'sp_8503000; status -> "PROJEKTIERT NEU"'),
+        ("sp_8503059:Interchange", "servesMode -> mode_train; servesMode -> mode_tram;",
+         "servesMode -> mode_train;"),
+    )
+
+    @classmethod
+    def setUpClass(cls):
+        files, _ = inputs()
+        cls.source = "\n".join(path.read_text(encoding="utf-8") for path in files)
+        cls.client, _ = load_client()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.client.close()
+
+    def test_removing_evidence_removes_the_conclusion(self):
+        for goal, old, new in self.CASES:
+            with self.subTest(goal=goal):
+                self.assertEqual(self.client.query(f"?- {goal}.")["status"], "true")
+                self.assertEqual(self.source.count(old), 1, f"edit must hit exactly one fact: {old!r}")
+                with Client(retain_transcript=False) as client:
+                    client.load_program(source=self.source.replace(old, new))
+                    self.assertEqual(client.query(f"?- {goal}.")["status"], "unknown")
 
 
 @unittest.skipUnless(os.environ.get("RUN_SBB_TESTS") == "1", "set RUN_SBB_TESTS=1 for cached SBB data")

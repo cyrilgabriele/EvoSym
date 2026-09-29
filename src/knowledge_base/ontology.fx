@@ -1,4 +1,4 @@
-// Vocabulary for all 18 hackathon questions. Source semantics: docs/adrs/0001-sbb-model.md.
+// Vocabulary for all 18 hackathon questions. Source semantics: docs/adrs/.
 // Syntax: https://unisg-ics-dsnlp.github.io/FrameX-Doc/syntax/classes-subclasses.html
 world open.
 

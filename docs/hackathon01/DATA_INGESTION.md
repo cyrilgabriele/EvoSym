@@ -1,6 +1,6 @@
 # Data ingestion: SBB Open Data to FrameX facts
 
-`scripts/ingest.py` downloads nine SBB Open Data datasets, filters them to Swiss passenger rail, cleans them and writes one FrameX fact file per dataset to `data/facts/`. This document records every change the script makes to the source data. The vocabulary follows the [test queries](HA1_FrameX_SBB_Test_Queries.md).
+`scripts/ingest.py` downloads nine SBB Open Data datasets, filters them to Swiss passenger rail, cleans them and writes one FrameX fact file per dataset to `data/facts/`. This document records every change the script makes to the source data. The vocabulary follows the [test queries](HA1_FrameX_SBB_Test_Queries.pdf).
 
 All numbers below come from the run on 29 September 2026. The train runs cover operating day 28 September 2026.
 
@@ -11,7 +11,7 @@ uv run python scripts/ingest.py            # use cached downloads in data/raw/
 uv run python scripts/ingest.py --refresh  # download all datasets again
 ```
 
-The script needs internet access and only the Python standard library. It stores each download unchanged as `data/raw/<dataset-id>.json`, writes `data/facts/<name>.fx`, and finally runs `framex check` on every file and on all files together. Query the facts with:
+Only `--refresh` needs internet access. The code lives in `src/adapters/sbb/` and validates every row with Pydantic, the project's only dependency. The script stores each download unchanged as `data/raw/<dataset-id>.json`, writes `data/facts/<name>.fx`, runs `framex check` on every file and on all files together, and records hashes and counts in `data/facts/manifest.json`. Query the facts with:
 
 ```sh
 framex query data/facts/*.fx '?- sp_8509000[hasWifi -> ?W].'
@@ -29,7 +29,7 @@ framex query data/facts/*.fx '?- sp_8509000[hasWifi -> ?W].'
 1. **Download** each dataset as JSON from the Opendatasoft Explore API v2.1 export (`https://data.sbb.ch/api/explore/v2.1/catalog/datasets/<id>/exports/json`).
 2. **Define the scope** as a list of Swiss passenger rail stop points taken from Didok (see below).
 3. **Join and clean.** Every row is joined to that list by its stop-point number. Rows outside the scope are dropped and listed in the file header.
-4. **Write facts** with the shared identifier `sp_<number>`. Strings are escaped (`\"`, `\\`) and whitespace is collapsed.
+4. **Write facts** with the shared identifier `sp_<number>`. Strings are escaped (`\"`, `\\`) and whitespace at both ends is removed.
 5. **Check** that every file loads in FrameX.
 
 ## Scope: which stop points count
@@ -72,7 +72,8 @@ Dataset `dienststellen-gemass-opentransportdataswiss`, 60,162 rows.
 - Keeps the 1,773 stop points described above.
 - Writes `sp_<number>:StopPoint`, `designation` (from `designationofficial`), `inCanton -> canton_<abbreviation>` and one `servesMode -> mode_<mode>` per entry in `meansoftransport` (split at `|`, lower case).
 - Adds the 26 cantons as objects: `canton_gr:Canton` with `designation -> "Graubünden"`.
-- 7,167 facts.
+- Adds the 8 means of transport as objects: `mode_train:TransportMode`.
+- 7,175 facts.
 
 ### `wifi.fx`: Wifi@Station
 
@@ -97,7 +98,7 @@ Dataset `perron`, 1,570 rows.
 Dataset `haltestelle-wartehallen`, 939 rows.
 
 - Drops 30 rows at 22 stop points outside the scope, leaving 909 waiting halls.
-- The source has no id. The id `waitinghall_<hash>` is the first 12 hex digits of an MD5 hash over stop point, line, kilometre, building name, status and position.
+- The source has no id. The id `waitinghall_<hash>` is the first 20 hex digits of a SHA-256 hash over stop point, line, kilometre, building name and position. The status is not part of the id, so a hall keeps its id when its status changes.
 - Writes `:WaitingHall`, `atStopPoint` and `status` as text: `BESTEHEND` (exists), `PROJEKTIERT NEU` (planned) or `PROJEKTIERT ABBRUCH` (planned for demolition).
 - The dataset's own `kanton` field is not used. The canton always comes from Didok, so there is a single source for it.
 - 2,727 facts.
@@ -140,13 +141,13 @@ Dataset `linie`, 433 rows.
 
 Dataset `ist-daten-sbb`, 69,854 rows for operating day 28 September 2026, 5,781 runs.
 
-- Groups rows by run (`fahrt_bezeichner`) and sorts each run by planned arrival time, or departure time at the first stop.
+- Groups rows by operating day and run (`fahrt_bezeichner`) and sorts each run by planned arrival time, or departure time at the first stop.
 - Keeps only actual stops. It drops 1,350 cancelled stops (`faellt_aus_tf`) and 32 further pass-throughs (`durchfahrt_tf`); a pass-through that is also cancelled counts as cancelled.
 - Drops 3,930 rows at 284 stop points outside the scope, mostly abroad (for example the TGV stops in France).
-- Writes 5,710 runs with at least one stop in scope: `run_<hash>:TrainRun`, `journeyId` (the source's `fahrt_bezeichner`) and `category` (from `verkehrsmittel_text`: IC, IR, S, …).
-- Writes 64,542 stops: `ev_<run>_<n>:StopEvent`, `atStopPoint` and `ofRun`.
+- Writes 5,710 runs with at least one stop in scope: `run_<hash>:TrainRun`, `journeyId` (the source's `fahrt_bezeichner`), `operatingDay` and `category` (from `verkehrsmittel_text`: IC, IR, S, …).
+- Writes 64,542 stops: `ev_<hash>:StopEvent`, `atStopPoint`, `ofRun`, `scheduledArrival` and `scheduledDeparture`. The hash covers operating day, run, stop point and both times.
 - Links consecutive actual stops of a run with `nextStop` (58,776 links). The chain breaks at a stop outside the scope, so no link spans a foreign station.
-- 269,532 facts.
+- 394,007 facts.
 
 ## Vocabulary written
 
@@ -157,6 +158,7 @@ Dataset `ist-daten-sbb`, 69,854 rows for operating day 28 September 2026, 5,781 
 | `inCanton` | attribute → `canton_<xx>` | stop point | `stations.fx` |
 | `servesMode` | attribute → `mode_<mode>` | stop point | `stations.fx` |
 | `Canton` | class | `canton_<xx>` | `stations.fx` |
+| `TransportMode` | class | `mode_<mode>` | `stations.fx` |
 | `hasWifi` | attribute (`true`) | stop point | `wifi.fx` |
 | `Platform` | class | `platform_<fid>` | `platforms.fx` |
 | `platformNumber`, `platformLength` | attribute (text, number) | platform | `platforms.fx` |
@@ -168,16 +170,17 @@ Dataset `ist-daten-sbb`, 69,854 rows for operating day 28 September 2026, 5,781 
 | `observedFrequency(Year)` | parameterised attribute (number) | stop point | `passenger_counts.fx` |
 | `servedByLine` | attribute → `line_<number>` | stop point | `line_stops.fx` |
 | `Line`, `label`, `lineName` | class, attributes (text) | `line_<number>` | `lines.fx` |
-| `TrainRun`, `journeyId`, `category` | class, attributes (text) | `run_<hash>` | `train_runs.fx` |
-| `StopEvent`, `ofRun`, `nextStop` | class, attributes → run / stop event | `ev_<run>_<n>` | `train_runs.fx` |
+| `TrainRun`, `journeyId`, `operatingDay`, `category` | class, attributes (text) | `run_<hash>` | `train_runs.fx` |
+| `StopEvent`, `ofRun`, `nextStop` | class, attributes → run / stop event | `ev_<hash>` | `train_runs.fx` |
+| `scheduledArrival`, `scheduledDeparture` | attribute (text, ISO timestamp) | stop event | `train_runs.fx` |
 
 ## Validation
 
-- All nine files load in FrameX 0.4.3, alone and together: 319,492 facts.
-- With simple test-only rules for the derived terms, 14 of the 18 test queries return exactly the reference solution: 1.1, 1.2, 1.3, 1.5, 1.7, 2.1, 2.2, 2.3, 2.5, 2.6, 3.1, 3.2, 3.4 and 3.5.
+- All nine files load in FrameX 0.4.3, alone and together: 443,975 facts.
+- With the rules in `src/knowledge_base/rules.fx`, 14 of the 18 test queries return exactly the reference solution: 1.1, 1.2, 1.3, 1.5, 1.7, 2.1, 2.2, 2.3, 2.5, 2.6, 3.1, 3.2, 3.4 and 3.5.
 - 1.4, 1.6 and 3.3 differ slightly because the reference uses operating day 27 September and these facts use 28 September. For example, Bern has no `TER` service and `nonStopTo` returns Bern Wankdorf instead of Lyss.
 - 2.4 returns Langenthal in addition to the reference (see known issues).
-- Loading the train runs together with rules needs `--max-proofs 1000000`. Without it, FrameX stops with "proof limit reached".
+- Loading the train runs together with rules in the FrameX CLI needs `--max-proofs 1000000`. Without it, FrameX stops with "proof limit reached". The Python runner sets the limit to 2,000,000.
 
 ## Known issues and limitations
 

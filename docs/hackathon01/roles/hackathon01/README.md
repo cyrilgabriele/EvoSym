@@ -25,6 +25,6 @@ The shared target is more than a searchable dataset: it needs rule-based derivat
 - **Remaining three hours:** Build and iterate. Submit cleaned, reproducible code and a README with the project overview and run instructions by the course deadline. Coding agents are allowed only after FlightMode; declare the tool and model in the submitted README if used.
 - **After the hackathon:** Write the short LaTeX report in IMRaD form and prepare the demo slides for the next studio session.
 
-**Setup gap to resolve:** The [course slides](../../exercise/02_week/02_HybridAI_Studio.pdf) call for Python 3.12, while this repository currently specifies Python 3.14 in `.python-version` and `pyproject.toml`. Confirm the required version before the build session. The team runs `.fx` files with the [locally installed FrameX CLI](../../FRAME_X_LOCAL.md); Python client code needs separate setup or the [hosted Workbench](../../FRAME_X_WORKBENCH.md).
+**Setup:** The [course slides](../../exercise/02_week/02_HybridAI_Studio.pdf) call for Python 3.12. `pyproject.toml` requires Python 3.12 or newer, and the tests pass on 3.12 and 3.14. The team runs `.fx` files with the [locally installed FrameX CLI](../../FRAME_X_LOCAL.md); Python client code needs separate setup or the [hosted Workbench](../../FRAME_X_WORKBENCH.md).
 
 Source: [Hybrid AI Studio, week 2](../../exercise/02_week/02_HybridAI_Studio.pdf), especially slides 7–14 (task, roles, requirements, timeline, deliverables, and preparation).
