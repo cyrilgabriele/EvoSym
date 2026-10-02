@@ -33,10 +33,106 @@ TODO
 
 TODO. Cite with \verb|\citet{}| or \verb|\citep{}|.
 
+\section{Methods}
+\label{sec:methods}
+
+% TODO (Filipp): data ingestion. TODO (Cyril): ontology and rules.
+
+\subsection{World assumption}
+\label{sec:world}
+
+Every program starts with \texttt{world open.}~\citep{framex}. A missing fact therefore means \emph{unknown}, not \emph{false}. We chose the open world because the SBB exports~\citep{sbbdata} are real-world data and none of them claims to be complete. For example, six rows of the WiFi export have no stop-point number, among them St.~Gallen. These stations get no \texttt{hasWifi} fact, so a closed world would claim that St.~Gallen has no WiFi. The adapter writes positive facts only, and an empty source value writes no fact. Query~1.7 (long-distance stations without WiFi) therefore returns \texttt{unknown}, as the reference expects.
+
+\subsection{Evaluation}
+\label{sec:evaluation}
+
+The evaluation checks two things: that every answer follows from the rules and the source data, and that the system answers \texttt{unknown} when the evidence is missing. We started with the six questions from our FlightMode concept and switched to the 18 TA queries once they were released. The queries run word for word, so the team adopted the TA vocabulary (\texttt{sp\_<UIC>}, \texttt{atStopPoint}, \ldots) as its naming contract. All tests use Python's \texttt{unittest} and need no extra dependency. Table~\ref{tab:tests} lists the four kinds of tests.
+
+\begin{table}[h!]
+\centering
+\caption{Test suite. Sample tests run on a small hand-written fact file and need no download. Real-data tests run with \texttt{RUN\_SBB\_TESTS=1}.}
+\label{tab:tests}
+\small
+\begin{tabular}{@{}p{0.2\linewidth}p{0.47\linewidth}p{0.25\linewidth}@{}}
+\toprule
+Test & What it checks & Data \\
+\midrule
+Query answers & All 18 queries return the expected rows; one subtest per query & Sample and real data \\
+Near misses & Cases just outside a rule must stay \texttt{unknown} & Sample \\
+Explanations & A derived fact traces back to a rule and an asserted source fact & Sample (8 rules), real data (3 facts) \\
+Counterfactuals & Changing one supporting fact removes the conclusion & Sample (8 rules, 10 cases) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Independent expected answers.}
+\texttt{scripts/build\_expected.py} computes the expected answer to each query directly from the raw JSON exports in plain Python. It uses neither FrameX nor the ingestion adapter nor the rules, so a bug in those cannot also hide in the expected answer. Before any rule existed, we fixed how to read each question by looking at the raw data:
+\begin{itemize}
+  \item Scope: Swiss service points with train or rack-railway service. Without this filter an emergency stop inside the Gotthard Base Tunnel counts as a station in Graub\"unden.
+  \item Daily passengers are the average over all days (DTV), and thresholds are strict. With the weekday average, Biel/Bienne would also pass query~1.5.
+  \item A train stopped at a station only if it neither passed through nor was cancelled.
+  \item A waiting hall counts if it exists or is planned for demolition, but not if it is only planned. We first counted existing halls only and changed this after the reference counted Landquart, whose hall still stands.
+  \item Long-distance categories are EC, IC, ICE, IR, NJ, RJ, RJX and TGV.
+\end{itemize}
+The train-run export holds only the previous operating day and is replaced daily. The expected answers therefore store SHA-256 hashes of the downloads they were built from, and the real-data tests refuse to compare against any other download.
+
+\paragraph{Near misses and explanations.}
+The sample contains cases that must stay \texttt{unknown}: a platform of exactly 320\,m, a station on a single line, a hall that is only planned, a passenger count just below the threshold, a station with no WiFi row, and a train that stops in Z\"urich between Bern and Chur, so Bern is not non-stop to Chur. For one derived fact per rule, \texttt{explain} must return a proof that contains both a rule step and an asserted source fact.
+
+\paragraph{Counterfactuals.}
+In FlightMode we asked whether the system could derive something false, for example that Chur has WiFi when it does not. Such a conclusion would not depend on its evidence. For each of the eight rules, a test takes a conclusion that is true on the sample, changes one supporting fact, reloads the program and requires the conclusion to become \texttt{unknown}. Examples are removing Chur's WiFi fact, shortening a 321\,m platform to 320\,m and changing an IC run to an S-Bahn. Two guards keep the test honest. First, the conclusion must be \texttt{true} before the edit: we found that query~1.7 also returns \texttt{unknown} on a program with no facts at all, so a broken rule would otherwise pass. Second, each edit must match exactly one place in the source, so a typo cannot silently change nothing. This guard caught one of our own edits, whose text also appeared in \texttt{rules.fx}. On the real data, removing Chur's WiFi fact turned ``Chur has WiFi'' from \texttt{true} to \texttt{unknown} and left Chur's junction status unchanged.
+
+\paragraph{Testing the tests.}
+We checked that the tests can fail. On an early synthetic knowledge base, deleting the Langenthal halls and the TGV stops failed exactly queries~2.4 and~3.4. Removing the condition \texttt{?A != ?B} from the junction rule made a station on one line a junction, and the counterfactual test failed.
+
+\section{Results}
+\label{sec:results}
+
+\paragraph{Correctness.}
+All 24 tests pass. On 2 October 2026 we rebuilt the expected answers from a download for operating day 30 September 2026, and the real-data tests passed in 7.1\,s. On the submitted data (operating day 28 September 2026), 14 of the 18 queries return exactly the TA reference. The other four differ for known reasons (Table~\ref{tab:reference}).
+
+\begin{table}[t]
+\centering
+\caption{Queries whose answers differ from the TA reference.}
+\label{tab:reference}
+\small
+\begin{tabular}{@{}lp{0.8\linewidth}@{}}
+\toprule
+Query & Reason \\
+\midrule
+1.4, 1.6, 3.3 & Train data: our snapshot covers 28 September 2026, the reference 27 September 2026. The export only holds the previous day, so we cannot download the reference day. \\
+2.4 & We return three more planned halls at Langenthal. Their source rows state canton BE and status \texttt{PROJEKTIERT NEU}, so we keep them. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Performance.}
+Measured on an Apple Silicon laptop, the engine starts in 3.9\,ms. Loading the 443,975 source facts and evaluating the rules takes 5.9\,s and yields 537,571 facts, 93,539 of them derived (226,112 rule firings in three rounds). Because the engine derives everything at load time, a query only looks up facts: the median query takes 0.22\,ms. The weak point is memory, with 1,353\,MB for the engine process.
+
+\section{Discussion}
+\label{sec:discussion}
+
+% TODO (team): main discussion.
+
+The evaluation has four limits.
+\begin{itemize}
+  \item The expected answers repeat our reading of each question in Python. A misread question is wrong in both places and still passes. Only the comparison with the TA reference guards against this.
+  \item The tests catch wrong reasoning, not wrong data. If SBB listed a station with WiFi that has none, the system would correctly derive \texttt{true} from a false source.
+  \item The explanation tests check that a proof contains a rule and an asserted fact, not that it uses the right rule and the right facts.
+  \item Answers about trains describe a single operating day. After each download the expected answers must be rebuilt, and the reference answers of another day can only guide the meaning of a query, not confirm our answers.
+\end{itemize}
+
 \bibliography{references}
 \bibliographystyle{tmlr}
 
 \appendix
 \section{Appendix}
+
+\subsection{Use of coding agents}
+\label{app:agents}
+
+Coding agents were used only after FlightMode. Gian used Claude Code with the models Claude Opus 5.5 and Claude Fable 5.1 for the tests, the expected-answer script, the performance report, the README and the architecture decision records. Every result was checked by running it, and the expected answers were written independently of the code they test.
+
+% TODO (Filipp, Cyril): your agent and model.
 
 \end{document}
