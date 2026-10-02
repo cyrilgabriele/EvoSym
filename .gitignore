@@ -220,3 +220,14 @@ __marimo__/
 # custom
 data/
 .DS_Store
+
+# LaTeX build output
+report/*.aux
+report/*.bbl
+report/*.blg
+report/*.log
+report/*.out
+report/*.fls
+report/*.fdb_latexmk
+report/*.synctex.gz
+report/main.pdf
