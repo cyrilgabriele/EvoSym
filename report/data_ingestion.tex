@@ -1,0 +1,24 @@
+% Filipp's part of the report: the data ingestion, from the domain expert's view.
+% Include it in main.tex by replacing the line "% TODO (Filipp): data ingestion." with:
+%   \input{data_ingestion}
+% The appendix sentence at the end of this file goes to "% TODO (Filipp): your agent and model."
+
+\subsection{Data ingestion}
+\label{sec:ingestion}
+
+% Mandate: docs/exercise/02_week/02_HybridAI_Studio.pdf, PDF page 8; docs/hackathon01/roles/hackathon01/README.md.
+% Contributions: Filipp's commits 23c6ed4 and dfb9e6c; docs/hackathon01/DATA_INGESTION.md.
+% Numbers: ingestion run of 29 September 2026, train runs of operating day 28 September 2026.
+My mandate as the domain expert was to understand the SBB data and its limits and to turn the questions into requirements for the facts. I chose the datasets, defined the scope and wrote the first version of the ingestion script, documented in \texttt{docs/hackathon01/DATA\_INGESTION.md}. Cyril later moved it into \texttt{src/adapters/sbb/} and added a Pydantic validation.
+
+Of the 60 datasets on SBB Open Data~\citep{sbbdata}, we use the nine that the TA queries draw on; most others describe infrastructure, real estate or ticket products. The script downloads them through the Explore API and stores them unchanged, so every later step runs offline. I kept a Didok service point only if it lies in Switzerland, is a stop point and is served by train or rack railway: 1,773 of 60,162 points. The filter uses Didok's country, not the number prefix, because Jestetten and Lottstetten carry Swiss numbers but lie in Germany. The datasets store the stop-point number as an integer, as text or as a float (\texttt{8502113.0}). The script converts each value to one identifier, \texttt{sp\_<number>}, so a query can join facts across datasets.
+
+The train runs needed the most cleaning. Of 69,854 stop records, I dropped 1,350 cancelled stops, 32 pass-throughs and 3,930 stops abroad. The script sorts the stops of each run by time and links consecutive stops with \texttt{nextStop}, on which the rule for direct connections builds (Section~\ref{sec:ontology}).
+
+The facts contain only what the data states; derived properties such as long platforms are left to the rules. The nine files hold 443,975 facts, and each file header records the source, the download hash, the counts and the dropped rows.
+
+\paragraph{Data limitations.}
+Six WiFi rows have no stop-point number (Section~\ref{sec:world}). The train export holds only the previous day, so three queries differ from the reference. Three planned halls at Langenthal have no building name, but I kept them because stop point, canton and status are present, which explains the fourth difference (Table~\ref{tab:reference}).
+
+% --- For the appendix (app:agents), replace "% TODO (Filipp): your agent and model." with:
+% Filipp used Claude with the model Claude Opus 5.5 for gathering and cleaning the data, and Claude Code with Claude Opus 5.5 for drafting the demo slide and Section~\ref{sec:ingestion}.
