@@ -47,6 +47,8 @@ TODO. Cite with \verb|\citet{}| or \verb|\citep{}|.
 % Contributions: Cyril's commits 27cb52d and a2763cc; docs/hackathon01/roles/hackathon01/cyril.md.
 My mandate as the developer was to own the software architecture, integrate FrameX, and keep the code runnable, structured and extensible. I separated the ontology, source facts, derivation rules and queries into distinct files. I defined a class hierarchy for places, facilities, train runs and stop events, with typed properties connecting them. I used shared station identifiers to connect facts across the SBB datasets.
 
+Separating these responsibilities makes the system easier to inspect and maintain. Source facts record the input evidence, while FrameX rules express deductions and provide proofs for derived answers. If an auditor finds an incorrect answer, this separation helps isolate whether the cause lies in the source data, its translation into facts, a derivation rule or the query. The time limit prevented a systematic comparison of alternative architectures.
+
 This implementation covers only part of the more detailed ontology we designed during FlightMode. Following Götz's advice to anticipate future hackathons, we included finer distinctions beyond the needs of the current queries. In theory, these distinctions could give an LLM agent a richer semantic understanding of the domain.
 
 For this hackathon, I implemented eight FrameX rules for long platforms, waiting hall availability, junctions, busy stations by year, train categories serving a station, stations served by long distance trains, direct connections between consecutive stops, and train and tram interchanges. For example, I required two distinct infrastructure lines for a junction and a length above 320\,m for a long platform. I kept these conclusions in FrameX rules. For direct connections, I linked consecutive stop events within the same train run to avoid inferring a direct connection across intermediate stops.
@@ -55,6 +57,8 @@ For this hackathon, I implemented eight FrameX rules for long platforms, waiting
 \label{sec:integration}
 
 I built the Python client in \texttt{src/framex.py} using only the standard library to communicate with the local FrameX process through JSON messages. I added a runner that combines the ontology, rules and either sample or ingested facts, loading large programs in chunks. Through \texttt{src/main.py}, I exposed all 18 queries, explanations and schema validation. I also wrote a small sample of facts so the team could exercise every query without downloading SBB data, matching my completion criterion.
+
+For future hackathons, a developer can add rules and queries while reusing the existing FrameX client and runner, extending the ontology where necessary. Adding datasets requires changes to the ingestion pipeline and the runner's dataset list. Splitting the SBB adapter into modules for downloading, dataset conversion and output handling would make such extensions more manageable.
 
 \paragraph{Implementation difficulties.}
 The tight time limit left little room to refine the architecture. In particular, the SBB ingestion adapter takes on too many responsibilities and could benefit from a clearer separation of tasks. I recognised this too late to refactor it within the available time.
@@ -154,7 +158,7 @@ The evaluation has four limits.
 
 Coding agents were used only after FlightMode. Gian used Claude Code with the models Claude Opus 5.5 and Claude Fable 5.1 for the tests, the expected-answer script, the performance report, the README and the architecture decision records. Every result was checked by running it, and the expected answers were written independently of the code they test.
 
-I used Codex with the model Astra 6 for the logic implementation.
+Cyril used Codex with GPT-6 Sol at medium reasoning effort for coding, and briefly used Astra 6 at medium reasoning effort for the SBB ingestor.
 
 % TODO (Filipp): your agent and model.
 
