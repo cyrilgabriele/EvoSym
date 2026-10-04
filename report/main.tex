@@ -42,16 +42,16 @@ TODO. Cite with \verb|\citet{}| or \verb|\citep{}|.
 \label{sec:ingestion}
 
 
-My mandate as the domain expert was to understand the SBB data and its limits and to turn the questions into requirements for the facts. I chose the datasets, defined the scope and wrote the first version of the ingestion script, documented in \texttt{docs/hackathon01/DATA\_INGESTION.md}. Cyril later moved it into \texttt{src/adapters/sbb/} and added a Pydantic validation.
+As the domain expert, the mandate was to understand the SBB data and its limits and to turn the questions into requirements for the facts. This covered choosing the datasets, defining the scope and writing the first version of the ingestion script, documented in \texttt{docs/hackathon01/DATA\_INGESTION.md}. The developer later moved the script into \texttt{src/adapters/sbb/} and added a Pydantic validation.
 
-Of the 60 datasets on SBB Open Data~\citep{sbbdata}, we use the nine that the TA queries draw on; most others describe infrastructure, real estate or ticket products. The script downloads them through the Explore API and stores them unchanged, so every later step runs offline. I kept a Didok service point only if it lies in Switzerland, is a stop point and is served by train or rack railway: 1,773 of 60,162 points. The filter uses Didok's country, not the number prefix, because Jestetten and Lottstetten carry Swiss numbers but lie in Germany. The datasets store the stop-point number as an integer, as text or as a float (\texttt{8502113.0}). The script converts each value to one identifier, \texttt{sp\_<number>}, so a query can join facts across datasets.
+The datasets were chosen according to the TA queries. Of the 60 datasets on SBB Open Data~\citep{sbbdata}, the nine that the queries draw on were used; most others describe infrastructure, real estate or ticket products. They were downloaded through the Explore API and stored unchanged, so every later step runs offline. A Didok service point was kept only if it lies in Switzerland, is a stop point and is served by train or rack railway: 1,773 of 60,162 points. The filter uses Didok's country, not the number prefix, because Jestetten and Lottstetten carry Swiss numbers but lie in Germany. The datasets store the stop-point number as an integer, as text or as a float (\texttt{8502113.0}). Each value was converted to one identifier, \texttt{sp\_<number>}, so a query can join facts across datasets.
 
-The train runs needed the most cleaning. Of 69,854 stop records, I dropped 1,350 cancelled stops, 32 pass-throughs and 3,930 stops abroad. The script sorts the stops of each run by time and links consecutive stops with \texttt{nextStop}, on which the rule for direct connections builds (Section~\ref{sec:ontology}).
+The train runs needed the most cleaning. Of 69,854 stop records, 1,350 cancelled stops, 32 pass-throughs and 3,930 stops abroad were dropped. The stops of each run were sorted by time, and consecutive stops were linked with \texttt{nextStop}, on which the rule for direct connections builds (Section~\ref{sec:ontology}).
 
 The facts contain only what the data states; derived properties such as long platforms are left to the rules. The nine files hold 443,975 facts, and each file header records the source, the download hash, the counts and the dropped rows.
 
 \paragraph{Data limitations.}
-Six WiFi rows have no stop-point number (Section~\ref{sec:world}). The train export holds only the previous day, so three queries differ from the reference. Three planned halls at Langenthal have no building name, but I kept them because stop point, canton and status are present, which explains the fourth difference (Table~\ref{tab:reference}).
+Six WiFi rows have no stop-point number (Section~\ref{sec:world}). The train export holds only the previous day, so three queries differ from the reference. Three planned halls at Langenthal have no building name, but they were kept because stop point, canton and status are present, which explains the fourth difference (Table~\ref{tab:reference}).
 
 \subsection{Ontology and derivation rules}
 \label{sec:ontology}
