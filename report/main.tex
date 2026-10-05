@@ -25,7 +25,7 @@
 \maketitle
 
 \begin{abstract}
-A question such as ``Where can a train take me from Bern without stopping?'' needs facts from several messy SBB Open Data exports, rules that combine them, and an explainable answer. With EvoSym we built a FrameX knowledge base that turns nine of these exports into 443,975 facts under an open-world assumption. Eight rules derive new facts, and every derived answer traces back to its rule and source facts. All 24 tests pass, 14 of the 18 test queries return exactly the reference answer, and the other four differ for known data reasons. The median query takes 0.22\,ms.
+A question such as ``Where can a train take me from Bern without stopping?'' needs facts from several messy SBB Open Data exports, rules that combine them, and an explainable answer. With EvoSym we built a FrameX knowledge base that turns nine of these exports into 443,975 facts under an open-world assumption. Eight rules derive new facts, and every derived answer traces back to its rule and source facts. All 24 tests pass, 14 of the 18 test queries return exactly the reference answer, and the other four most likely differ because of the data. The median query takes 0.22\,ms.
 
 Cyril Gabriele served as the developer, Filipp Rechsteiner as the domain expert, and Gian Seifert as the auditor.
 \end{abstract}
@@ -37,7 +37,7 @@ Cyril Gabriele served as the developer, Filipp Rechsteiner as the domain expert,
 % Numbers: Sections ingestion, ontology, results (performance) of this report.
 Large language models answer questions about train travel fluently, but they have no explicit notion of facts, may hallucinate and cannot show why an answer holds. A symbolic system stores facts explicitly, derives new facts with rules and can explain every conclusion. Hackathon~1 of the Hybrid AI course asked for such a system: a FrameX~\citep{framex} program that ingests messy open data of the Swiss Federal Railways (SBB)~\citep{sbbdata}, models it with an ontology and rules, derives explainable new facts and answers multi-hop questions about Swiss passenger rail travel without an LLM or internet access after initialisation.
 
-This report presents EvoSym, the team's solution. EvoSym turns nine SBB Open Data exports into 443,975 FrameX facts under an open-world assumption, derives new facts with eight rules and answers the 18 test queries provided by the teaching assistants. Every derived answer traces back to its rule and source facts. On the submitted data, 14 of the 18 queries return exactly the reference answer, the other four differ for known data reasons, and the median query takes 0.22\,ms. Section~\ref{sec:methods} describes the data ingestion, the ontology and rules, the Python integration, the world assumption and the evaluation. Section~\ref{sec:results} reports correctness and performance, and Section~\ref{sec:discussion} discusses the limits.
+This report presents EvoSym, the team's solution. EvoSym turns nine SBB Open Data exports into 443,975 FrameX facts under an open-world assumption, derives new facts with eight rules and answers the 18 test queries provided by the teaching assistants. Every derived answer traces back to its rule and source facts. On the submitted data, 14 of the 18 queries return exactly the reference answer, the other four most likely differ because of the data, and the median query takes 0.22\,ms. Section~\ref{sec:methods} describes the data ingestion, the ontology and rules, the Python integration, the world assumption and the evaluation. Section~\ref{sec:results} reports correctness and performance, and Section~\ref{sec:discussion} discusses the limits.
 
 \section{Methods}
 \label{sec:methods}
@@ -62,23 +62,23 @@ Six WiFi rows have no stop-point number (Section~\ref{sec:world}). The train exp
 
 % Mandate: docs/exercise/02_week/02_HybridAI_Studio.pdf, PDF pages 8 and 9.
 % Contributions: Cyril's commits 27cb52d and a2763cc; docs/hackathon01/roles/hackathon01/cyril.md.
-My mandate as the developer was to own the software architecture, integrate FrameX, and keep the code runnable, structured and extensible. I separated the ontology, source facts, derivation rules and queries into distinct files. I defined a class hierarchy for places, facilities, train runs and stop events, with typed properties connecting them. I used shared station identifiers to connect facts across the SBB datasets.
+The developer's mandate was to own the software architecture, integrate FrameX, and keep the code runnable, structured and extensible. We separated the ontology, source facts, derivation rules and queries into distinct files. We defined a class hierarchy for places, facilities, train runs and stop events, with typed properties connecting them. Shared station identifiers connect facts across the SBB datasets.
 
 Separating these responsibilities makes the system easier to inspect and maintain. Source facts record the input evidence, while FrameX rules express deductions and provide proofs for derived answers. If an auditor finds an incorrect answer, this separation helps isolate whether the cause lies in the source data, its translation into facts, a derivation rule or the query.
 
 This implementation covers only part of the more detailed ontology we designed during FlightMode. Following Götz's advice to anticipate future hackathons, we included finer distinctions beyond the needs of the current queries. In theory, these distinctions could give an LLM agent a richer semantic understanding of the domain.
 
-For this hackathon, I implemented eight FrameX rules for long platforms, waiting hall availability, junctions, busy stations by year, train categories serving a station, stations served by long distance trains, direct connections between consecutive stops, and train and tram interchanges. For example, I required two distinct infrastructure lines for a junction and a length above 320\,m for a long platform. For direct connections, I linked consecutive stop events within the same train run to avoid inferring a direct connection across intermediate stops.
+For this hackathon, we implemented eight FrameX rules for long platforms, waiting hall availability, junctions, busy stations by year, train categories serving a station, stations served by long distance trains, direct connections between consecutive stops, and train and tram interchanges. For example, a junction requires two distinct infrastructure lines, and a long platform a length above 320\,m. For direct connections, we linked consecutive stop events within the same train run to avoid inferring a direct connection across intermediate stops.
 
 \subsection{Python integration}
 \label{sec:integration}
 
-I built the Python client in \texttt{src/framex.py} using only the standard library to communicate with the local FrameX process through JSON messages. I added a runner that combines the ontology, rules and either sample or ingested facts, loading large programs in chunks. Through \texttt{src/main.py}, I exposed all 18 queries, explanations and schema validation. I also wrote a small sample of facts so the team could exercise every query without downloading SBB data, matching my completion criterion.
+We used the course's Python client in \texttt{src/framex.py}, which needs only the standard library and talks to the local FrameX process through JSON messages. A runner combines the ontology, rules and either sample or ingested facts, loading large programs in chunks. \texttt{src/main.py} exposes all 18 queries, explanations and schema validation. A small sample of facts lets the team exercise every query without downloading SBB data, which was the developer's completion criterion.
 
 For future hackathons, a developer can add rules and queries while reusing the existing FrameX client and runner, extending the ontology where necessary. Adding datasets requires changes to the ingestion pipeline and the runner's dataset list. Splitting the SBB adapter into modules for downloading, dataset conversion and output handling would make such extensions more manageable.
 
 \paragraph{Implementation difficulties.}
-The tight time limit left little room to refine the architecture. In particular, the SBB ingestion adapter takes on too many responsibilities, and I recognised this too late to refactor it.
+The tight time limit left little room to refine the architecture. In particular, the SBB ingestion adapter takes on too many responsibilities, and we recognised this too late to refactor it.
 
 \subsection{World assumption}
 \label{sec:world}
@@ -88,7 +88,7 @@ Every program starts with \texttt{world open.}~\citep{framex}. A missing fact th
 \subsection{Evaluation}
 \label{sec:evaluation}
 
-The evaluation checks two things: that every answer follows from the rules and the source data, and that the system answers \texttt{unknown} when the evidence is missing. We started with the six questions from our FlightMode concept and switched to the 18 TA queries once they were released. The queries run word for word, so the team adopted the TA vocabulary (\texttt{sp\_<UIC>}, \texttt{atStopPoint}, \ldots) as its naming contract. All tests use Python's \texttt{unittest} and need no extra dependency. Table~\ref{tab:tests} lists the four kinds of tests.
+The evaluation checks two things: that every answer follows from the rules and the source data, and that the system answers \texttt{unknown} when the evidence is missing. We started with the six questions from our FlightMode concept and switched to the 18 TA queries once they were released. The queries run word for word, so the team adopted the TA vocabulary (\texttt{sp\_<UIC>}, \texttt{atStopPoint}, \ldots) as its naming contract. Table~\ref{tab:tests} lists the four kinds of tests.
 
 \begin{table}[h!]
 \centering
@@ -111,7 +111,7 @@ Counterfactuals & Changing one supporting fact removes the conclusion & Sample (
 \texttt{scripts/build\_expected.py} computes the expected answer to each query directly from the raw JSON exports in plain Python. It uses neither FrameX nor the ingestion adapter nor the rules, so a bug in those cannot also hide in the expected answer. Before any rule existed, we fixed how to read each question by looking at the raw data:
 \begin{itemize}\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}
   \item Scope: Swiss service points with train or rack-railway service. Without this filter an emergency stop inside the Gotthard Base Tunnel counts as a station in Graub\"unden.
-  \item Daily passengers are the average over all days (DTV), and thresholds are strict. With the weekday average, Biel/Bienne would also pass query~1.5.
+  \item Daily passengers are the average over all days (DTV), and ``more than'' thresholds are strict. With the weekday average, Biel/Bienne would also pass query~1.5.
   \item A train stopped at a station only if it neither passed through nor was cancelled.
   \item A waiting hall counts if it exists or is planned for demolition, but not if it is only planned. We first counted existing halls only and changed this after the reference counted Landquart, whose hall still stands.
   \item Long-distance categories are EC, IC, ICE, IR, NJ, RJ, RJX and TGV.
@@ -122,7 +122,7 @@ The train-run export holds only the previous operating day and is replaced daily
 The sample contains cases that must stay \texttt{unknown}: a platform of exactly 320\,m, a station on a single line, a hall that is only planned, a passenger count just below the threshold, a station with no WiFi row, and a train that stops in Z\"urich between Bern and Chur, so Bern is not non-stop to Chur. For one derived fact per rule, \texttt{explain} must return a proof that contains both a rule step and an asserted source fact.
 
 \paragraph{Counterfactuals.}
-In FlightMode we asked whether the system could derive a conclusion that does not depend on its evidence, for example that Chur has WiFi when it does not. For each of the eight rules, a test takes a conclusion that is true on the sample, changes one supporting fact, reloads the program and requires the conclusion to become \texttt{unknown}. Examples are removing Chur's WiFi fact, shortening a 321\,m platform to 320\,m and changing an IC run to an S-Bahn. Two guards keep the test honest. First, the conclusion must be \texttt{true} before the edit: we found that query~1.7 also returns \texttt{unknown} on a program with no facts at all, so a broken rule would otherwise pass. Second, each edit must match exactly one place in the source, so a typo cannot silently change nothing. This guard caught one of our own edits, whose text also appeared in \texttt{rules.fx}. On the real data, removing Chur's WiFi fact turned ``Chur has WiFi'' from \texttt{true} to \texttt{unknown} and left Chur's junction status unchanged.
+In FlightMode we asked whether the system could derive a conclusion that its evidence does not support, for example that Chur has WiFi. A counterfactual test takes a conclusion that is true on the sample, changes one supporting fact, reloads the program and requires the conclusion to become \texttt{unknown}. Nine cases cover the eight rules, two of them the waiting-hall rule, for example shortening a 321\,m platform to 320\,m or changing an IC run to an S-Bahn. A tenth case removes Chur's asserted WiFi fact. Two guards keep the test honest. The conclusion must be \texttt{true} before the edit: we found that query~1.7 also returns \texttt{unknown} on a program with no facts at all, so a broken rule would otherwise pass. And each edit must match exactly one place in the source, so a typo cannot silently change nothing. This guard caught one of our own edits, whose text also appeared in \texttt{rules.fx}. On the real data, removing Chur's WiFi fact turned ``Chur has WiFi'' from \texttt{true} to \texttt{unknown} and left Chur's junction status unchanged.
 
 \paragraph{Testing the tests.}
 We checked that the tests can fail. On an early synthetic knowledge base, deleting the Langenthal halls and the TGV stops failed exactly queries~2.4 and~3.4. Removing the condition \texttt{?A != ?B} from the junction rule made a station on one line a junction, and the counterfactual test failed.
@@ -131,9 +131,9 @@ We checked that the tests can fail. On an early synthetic knowledge base, deleti
 \label{sec:results}
 
 \paragraph{Correctness.}
-All 24 tests pass. On 2 October 2026 we rebuilt the expected answers from a download for operating day 30 September 2026, and the real-data tests passed in 7.1\,s. On the submitted data (operating day 28 September 2026), 14 of the 18 queries return exactly the TA reference. The other four differ for known reasons (Table~\ref{tab:reference}).
+All 24 tests pass. On 2 October 2026 we rebuilt the expected answers from a download for operating day 30 September 2026, and the real-data tests passed in 7.1\,s. On the submitted data (operating day 28 September 2026), 14 of the 18 queries return exactly the TA reference. The other four differ for the reasons in Table~\ref{tab:reference}.
 
-\begin{table}[t]
+\begin{table}[h!]
 \centering
 \caption{Queries whose answers differ from the TA reference.}
 \label{tab:reference}
@@ -142,27 +142,21 @@ All 24 tests pass. On 2 October 2026 we rebuilt the expected answers from a down
 \toprule
 Query & Reason \\
 \midrule
-1.4, 1.6, 3.3 & Train data: our snapshot covers 28 September 2026, the reference 27 September 2026. The export only holds the previous day, so we cannot download the reference day. \\
+1.4, 1.6, 3.3 & Most likely the train data: ours covers 28 September 2026, the reference 27 September. The export holds only the previous day, so we could not confirm this. \\
 2.4 & We return three more planned halls at Langenthal. Their source rows state canton BE and status \texttt{PROJEKTIERT NEU}, so we keep them. \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \paragraph{Performance.}
-Measured on an Apple Silicon laptop, the engine starts in 3.9\,ms. Loading the 443,975 source facts and evaluating the rules takes 5.9\,s and yields 537,571 facts, 93,539 of them derived (226,112 rule firings in three rounds). Because the engine derives everything at load time, a query only looks up facts: the median query takes 0.22\,ms. The weak point is memory, with 1,353\,MB for the engine process.
+Measured on an Apple Silicon laptop, the engine starts in 3.9\,ms. Loading the 443,975 source facts and evaluating the rules takes 5.9\,s and yields 537,571 facts, 93,539 of them derived (226,112 rule firings in three rounds). Because the engine derives everything at load time, a query only looks up facts: the median query takes 0.22\,ms.
 
 \section{Discussion}
 \label{sec:discussion}
 
-% TODO (team): main discussion.
+EvoSym meets the core requirements: rules derive the answers, every derived answer is explainable, and query~1.7 shows the open world. Three choices limit it. The stop order of a train run is computed in Python during ingestion, so it does not appear in the proofs. Under the open world, ``which stations lack X'' stays \texttt{unknown} unless a dataset is declared complete for X. Deriving everything at load time makes queries fast but needs 1,353\,MB of memory, which weakens portability. The LLM layer from our FlightMode concept, which would turn a question into a FrameX query, remains future work.
 
-The evaluation has four limits.
-\begin{itemize}\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}
-  \item The expected answers repeat our reading of each question in Python. A misread question is wrong in both places and still passes. Only the comparison with the TA reference guards against this.
-  \item The tests catch wrong reasoning, not wrong data. If SBB listed a station with WiFi that has none, the system would correctly derive \texttt{true} from a false source.
-  \item The explanation tests check that a proof contains a rule and an asserted fact, not that it uses the right rule and the right facts.
-  \item Answers about trains describe a single operating day. After each download the expected answers must be rebuilt, and the reference answers of another day can only guide the meaning of a query, not confirm our answers.
-\end{itemize}
+The evaluation has five limits. First, the expected answers repeat our reading of each question, so a misread question still passes; only the TA reference guards against this. Second, the tests catch wrong reasoning, not wrong data: if SBB wrongly listed a station with WiFi, the system would derive \texttt{true} from a false source. Third, the explanation tests check that a proof contains a rule and an asserted fact, not which ones. Fourth, on the real data query~1.7 is checked by its status alone, which a program with no facts also passes, because the guard that a conclusion is \texttt{true} first runs only on the sample. Fifth, train answers cover one operating day: each download needs rebuilt expected answers, and the reference of another day cannot confirm ours.
 
 \bibliography{references}
 \bibliographystyle{tmlr}
