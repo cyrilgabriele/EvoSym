@@ -12,6 +12,7 @@ class Performance(unittest.TestCase):
         cls.report = measure("sample", repeat=2)
 
     def test_every_question_and_rule_is_measured(self):
+        """The report times every query, every rule's explanation and the engine start."""
         self.assertEqual([row["id"] for row in self.report["queries"]], [q.id for q in QUESTIONS])
         self.assertEqual(len(self.report["explanations"]), 8)
         self.assertEqual(len(self.report["start_ms"]), 2)
@@ -20,6 +21,7 @@ class Performance(unittest.TestCase):
         self.assertEqual(self.report["scaling"], [])
 
     def test_report_names_every_question_and_escapes_text(self):
+        """The HTML report lists every question and escapes quotes."""
         page = render(self.report)
         for question in QUESTIONS:
             self.assertIn(f"{question.id} {question.title}", page)
@@ -27,6 +29,7 @@ class Performance(unittest.TestCase):
         self.assertNotIn('busyIn("2025")', page)
 
     def test_bars_scale_to_the_largest_value(self):
+        """Bar widths scale to the largest value."""
         page = bars([("a", 1.0, ""), ("b", 4.0, "")], "s")
         self.assertIn("width: 25.0%", page)
         self.assertIn("width: 100.0%", page)

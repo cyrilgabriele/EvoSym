@@ -34,6 +34,7 @@ class SampleQuestions(unittest.TestCase):
         cls.client.close()
 
     def test_all_18_answers(self):
+        """The 18 queries return the expected answers on the hand-written sample facts."""
         self.assertEqual(len(QUESTIONS), 18)
         self.assertEqual({q.id for q in QUESTIONS}, set(self.expected))
         for question in QUESTIONS:
@@ -47,6 +48,7 @@ class SampleQuestions(unittest.TestCase):
                     self.assertCountEqual(result["bindings"], expected)
 
     def test_thresholds_and_missing_evidence(self):
+        """Facts at a threshold or without evidence are unknown, not true."""
         for goal in (
             "platform_bern_boundary:LongPlatform", "platform_bern_short:LongPlatform",
             "platform_zh_unknown[platformLength -> ?L]", "sp_8509002:Junction",
@@ -58,11 +60,13 @@ class SampleQuestions(unittest.TestCase):
                 self.assertEqual(self.client.query(f"?- {goal}.")["status"], "unknown")
 
     def test_hierarchy_and_standing_demolition_hall(self):
+        """Subclasses inherit their superclasses, and a hall planned for demolition still stands."""
         for goal in ("platform_bern_long:Facility", "platform_bern_long:Entity",
                      "sp_8509000:Place", "sp_8503000[hasWaitingHall -> true]"):
             self.assertEqual(self.client.query(f"?- {goal}.")["status"], "true")
 
     def test_every_rule_family_has_traceable_evidence(self):
+        """Every rule's conclusion can be explained down to asserted facts."""
         for fact in (
             "platform_bern_long:LongPlatform", "sp_8509000[hasWaitingHall -> true]",
             "sp_8509000:Junction", 'sp_8505300[busyIn("2025") -> true]',
@@ -75,9 +79,11 @@ class SampleQuestions(unittest.TestCase):
                 self.assertIn("Asserted fact", explanation)
 
     def test_schema_values(self):
+        """Every sample fact has the type the ontology declares."""
         self.assertEqual(schema_failures(self.client.validate()), [])
 
     def test_missing_real_data_fails_clearly(self):
+        """Without the SBB facts, the runner stops and names scripts/ingest.py."""
         with tempfile.TemporaryDirectory() as directory:
             with self.assertRaisesRegex(FileNotFoundError, "scripts/ingest.py"):
                 inputs("sbb", directory)
@@ -121,6 +127,7 @@ class Counterfactuals(unittest.TestCase):
         cls.client.close()
 
     def test_removing_evidence_removes_the_conclusion(self):
+        """Removing the evidence behind a true fact makes it unknown."""
         for goal, old, new in self.CASES:
             with self.subTest(goal=goal):
                 self.assertEqual(self.client.query(f"?- {goal}.")["status"], "true")
@@ -149,6 +156,7 @@ class SBBQuestions(unittest.TestCase):
         cls.client.close()
 
     def test_all_18_answers_against_independent_raw_oracle(self):
+        """FrameX answers equal answers computed from the raw SBB files without FrameX."""
         self.assertEqual(self.metadata["operating_days"], self.expected["operating_days"])
         for question in QUESTIONS:
             with self.subTest(question=question.id):
@@ -161,6 +169,7 @@ class SBBQuestions(unittest.TestCase):
                     self.assertEqual(actual, self.expected[question.id])
 
     def test_full_data_proofs(self):
+        """On the real data, derived facts can be explained down to asserted facts."""
         for fact in ('sp_8507000[servedByCategory -> "IC"]', "sp_8509002:Junction",
                      "sp_8507000[nonStopTo -> sp_8503000]"):
             explanation = self.client.explain(fact)
