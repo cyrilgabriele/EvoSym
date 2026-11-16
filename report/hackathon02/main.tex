@@ -34,7 +34,14 @@ TODO
 % Auditor's introduction; the team can extend this with the overall project context.
 The Hackathon~2 refund assistant combines language-model interpretation with FrameX decisions. The auditor's mandate was to check that the model could not execute unchecked rules or queries, that acceptance depended on evidence, and that the system protected the course's five invariants: model output remains data, answers are dated and replayable, rules decide, evidence governs acceptance, and failure states remain distinct. The auditor built an independent evaluator covering both the FrameX decisions and the passenger-facing conversation~\citep{h2evaluation}.
 
+Gian Seifert served as the domain expert, Filipp Rechsteiner as the developer, and Cyril Gabriele as the auditor.
+
+\section{Methods}
+\label{sec:methods}
+
+\input{domain_expert}
 \input{auditor}
+\input{domain_expert_discussion}
 
 \bibliography{references}
 \bibliographystyle{tmlr}
