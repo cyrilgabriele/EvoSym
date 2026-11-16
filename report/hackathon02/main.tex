@@ -7,6 +7,8 @@
 \usepackage{url}
 \usepackage{graphicx}
 \usepackage{booktabs}
+\usepackage{array}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1\linewidth}}
 
 \title{EvoSym: Evolvable Neuro-Symbolic Intelligence}
 
@@ -25,28 +27,51 @@
 \maketitle
 
 \begin{abstract}
-TODO
+EvoSym answers refund questions about delayed SBB trains, asked in the passenger's own words. It couples GPT-5 mini to a FrameX knowledge base of the SBB trains of 7 November 2026 through five coupling patterns: the model turns the message into quoted slots and phrases the reply around placeholders, while the rules identify the train, measure the delay at the destination, apply the refund policy and hand every open case to a person. An independent evaluator matched all 17 policy cases, 17 of 17 live conversations and 9 of 9 dialogue and fault scenarios, and exposed a rounding convention that the policy left open. Loading one small world per decision brought a verdict from up to 166\,s down to about 13\,s; the median live reply took 16.6\,s. The results cover one operating day.
 \end{abstract}
 
 \section{Introduction}
 \label{sec:introduction}
 
-% Auditor's introduction; the team can extend this with the overall project context.
-The Hackathon~2 refund assistant combines language-model interpretation with FrameX decisions. The auditor's mandate was to check that the model could not execute unchecked rules or queries, that acceptance depended on evidence, and that the system protected the course's five invariants: model output remains data, answers are dated and replayable, rules decide, evidence governs acceptance, and failure states remain distinct. The auditor built an independent evaluator covering both the FrameX decisions and the passenger-facing conversation~\citep{h2evaluation}.
-
-Gian Seifert served as the domain expert, Filipp Rechsteiner as the developer, and Cyril Gabriele as the auditor.
+Hackathon~2 asked us to make the course's FrameX knowledge base of Swiss passenger rail hybrid~\citep{h2task}. A passenger describes a delayed journey in their own words; the system asks for what is missing, identifies the train, measures the delay at the destination from the trains that really ran on Saturday, 7 November 2026, and either answers whether a refund is due under the SBB policy or hands the case to customer service. Every station, time, train, delay and percentage in an answer must come from the knowledge base. The design had to combine at least four coupling patterns, justify them with the decision guide, and keep the five invariants of the pattern catalogue (Table~\ref{tab:invariants})~\citep{handschuh2026patterns}. Gian Seifert served as the domain expert, Filipp Rechsteiner as the developer and Cyril Gabriele as the auditor; each section reports the three views in this order.
 
 \section{Methods}
 \label{sec:methods}
 
 \input{domain_expert}
+\input{developer}
 \input{auditor}
+
+\section{Results}
+\label{sec:results}
+
+\input{domain_expert_results}
+\input{developer_results}
+\input{auditor_results}
+
+\section{Discussion}
+\label{sec:discussion}
+
 \input{domain_expert_discussion}
+\input{developer_discussion}
+\input{auditor_discussion}
 
 \bibliography{references}
 \bibliographystyle{tmlr}
 
 \appendix
 \section{Appendix}
+
+\subsection{Use of coding agents}
+
+Coding agents were used only after FlightMode. Gian used Claude Code with Claude Opus 5.5 for coding during the hackathon and for report writing.
+
+Filipp used Claude Code with Claude Opus 5.5 for coding during the hackathon, and with Claude Fable 5.2 to draft the developer's sections of this report from the repository.
+
+Cyril used Codex with GPT-6 Sol for coding during the hackathon and for report writing.
+
+\subsection{Declaration of authorship}
+
+We declare that we wrote this report ourselves, using only the sources and aids listed. Contributions of coding agents are declared above.
 
 \end{document}

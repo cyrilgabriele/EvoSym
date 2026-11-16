@@ -1,0 +1,30 @@
+% Filipp's contribution: the developer's view. Host: src/pipeline/. Decisions: docs/adrs/0001 and 0002.
+
+\subsection{Coupling patterns}
+\label{sec:patterns}
+
+The developer's mandate was to choose the coupling patterns and to attach GPT-5 mini to the knowledge base so that the rules keep the last word. Following the decision guide~\citep{handschuh2026patterns}, we combined five. The model must read free text, so \textbf{P3} (Model as Translator) turns each message into six closed slots (origin, destination, date, time, ticket price, train) and never writes a query. With \textbf{P1} (Model as Sensor) every slot carries the passenger's own words as a quote, accepted only if the quote occurs in a message and the value holds against the knowledge base. \textbf{P6} (Critique and Repair) returns a failed extraction or phrasing once with a fixed reason, then asks the passenger or uses a fixed sentence. Every value the passenger reads must be exact, so with \textbf{P12} (Model Selects, Rules Write) the model picks a train only by identifier from the rule-supplied list and writes its reply around named placeholders, without seeing the values. With \textbf{P7} (Division by Competence) a case counts as decided only if the policy derived a refund status; every other case goes to customer service with the model's assessment as a note. Our FlightMode diagram had P3 or P6, P12 and P7; the build uses both and adds P1, as dates, times and prices have no closed list to check against. We did not use Rules Steer the Model (P5): with four required slots, a small closed state machine in the host decides the next step.
+
+\subsection{Where the model attaches}
+\label{sec:attach}
+
+The model attaches in one new package, \texttt{src/pipeline/}, beside the template's layers. The rule base changed in three places: the domain expert's policy file, two edits to \texttt{46-refunds.fx} and a small gate for the hand-off. The host is the only caller of both GPT-5 mini and FrameX: it asks the model for a JSON object through the official OpenAI client and records every answer with its date, so an identical request is replayed. The model never calls the rules and never sees a query. Unlike the catalogue, where the rules issue the requests, only the assessment of an open delay check is requested by a rule, through FrameX's \texttt{competence.fx}, and carried out by the host. Table~\ref{tab:boundary} lists what crosses the boundary; the \texttt{RefundCase} and \texttt{DelayCheck} facts are written from checked identifiers only, and the host inserts the values FrameX returns into the reply word for word. A failed extraction or selection call ends the turn as a technical error without a verdict; a failed phrasing call falls back to the fixed sentence, so the verdict still reaches the passenger.
+
+\begin{table}[t]
+\caption{What crosses the model boundary, per kind of call from the host to GPT-5 mini.}
+\label{tab:boundary}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{0.92}
+\begin{tabular}{L{0.16}L{0.30}L{0.18}L{0.29}}
+\toprule
+Call & To the model & From the model & Accepted only if \\
+\midrule
+Extract slots (P3, P1) & passenger messages, slots already known & slots with quotes & quote found and value valid; one repair (P6) \\
+Ask for missing slots (P3) & conversation, names of the known values, what is missing & one question with placeholders & no digit, station name or promise of a refund \\
+Select train (P12) & passenger's reply, offered trains under identifiers & one identifier or none & the identifier is in the list \\
+Phrase outcome (P12) & decision, sentence with placeholders and their meaning & decision and reply & same decision, every placeholder, no digit or station name; one repair (P6) \\
+Assess open case (P7) & case file, the rules' reason & verdict and reason & never: it is a note for the officer \\
+\bottomrule
+\end{tabular}
+\end{table}

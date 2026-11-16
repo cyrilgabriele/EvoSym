@@ -1,0 +1,5 @@
+% Filipp's results. Source: docs/adrs/0001_refund_case_worlds.md.
+
+\subsection{One world per decision}
+
+Adding a case to one session of the full workspace made the engine recompute everything: 27\,s for the first case and 166\,s by the third. Each decision therefore loads a fresh engine with the unchanged rules and only the trips they can use for that journey; listing the trains then takes about 5\,s and a verdict about 13\,s, against about 3\,s for a phrased reply, so the cost lies in the knowledge base, not the model~\citep{rechsteiner2026adr0001,rechsteiner2026adr0002}. The reduced world matched a world with every trip at the origin or destination: the same train lists on four routes, the same result in nine of nine delay checks. It also exposed a data fault: two services under one trip reference formed a Z\"urich HB--Bern train that arrived before it departed, hid every real departure and earned a false 25\,\% refund, until the rule required arrival after departure.

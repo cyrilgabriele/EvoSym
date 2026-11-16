@@ -1,9 +1,5 @@
-% Gian's contribution to the Discussion: design choices in hindsight, from the domain expert's view.
-% Sources: hackathon-day session notes (gaps spotted around 16:15); docs/cyril/evaluation-baseline.md (rounding);
-% data counts recomputed on 16 November 2026 from fx/70-ist-daten-sbb.fx.
+% Gian's discussion. Sources: session notes (gaps spotted around 16:15); docs/cyril/evaluation-baseline.md.
 
-\subsection{Design choices in hindsight}
+\subsection{Lessons learned on the domain}
 
-Four domain choices would be made differently. First, rounding: the policy sheet does not say how to round fractional Rappen. The domain expert chose floor rounding, the auditor's oracle half-up, and the evaluation found four mismatches (Section~\ref{sec:results}). A convention the sheet leaves open belongs in the spec, agreed by all roles before code is written. Second, relative dates such as ``last Saturday'' and the refundable share of a return ticket were noticed as gaps but never specified, so nobody decided them. Third, the ticket price is the only input the knowledge base cannot confirm: the quote check proves that the passenger wrote it, not that they paid it. Answering with the percentage only and leaving the amount to SBB, which holds the ticket record, would remove that input. Fourth, refund cases are rare on the operating day; choosing the real refund journeys in FlightMode would have given all roles the same test cases from the start.
-
-One choice held up. In the FlightMode debate the developer argued that rules steering the model (P5) would need fewer model calls, but the measured cost lay in the knowledge base (about 13\,s per verdict), not the model (about 3\,s per reply)~\citep{h2adrs}.
+Four domain choices would change. Rounding: the sheet is silent on fractional Rappen, and the domain expert's floor rounding and the auditor's half-up oracle disagreed in four cases (Section~\ref{sec:audit-results}); such conventions belong in the spec before code. Relative dates (``last Saturday'') and return tickets were never specified. The ticket price is the only input the knowledge base cannot confirm; answering with the percentage and leaving the amount to SBB would remove it. Real refund journeys, rare that day, were mined slowly after FlightMode and stayed local; committed early, they would have given all roles the same test cases.

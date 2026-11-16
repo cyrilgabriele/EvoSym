@@ -1,46 +1,13 @@
 % Gian's contribution: the domain expert's view. Sources are in the sibling hybridai-hackathon02 repository.
-% Mandate: FlightMode Sheet 1, item 1.2, Domain Expert questions; task sheet Hackathon2-instructions.pdf.
-% Policy: Sheet 2; fx/47-refund-policy.fx (commit 1f32587, rounding revised in c103afd).
-% Language contract: docs/refund-chat.md (commit 1f32587). Tests: tests/test_refunds.py (19 passed, 16 November 2026).
-% Workflow view: src/ui/app.py (commit 12c0536).
+% Mandate: FlightMode Sheet 1, item 1.2; Studio slides 20.10.2026 (Language & Grounding).
+% Policy: fx/47-refund-policy.fx (commit 1f32587, rounding revised in c103afd). Contract: docs/refund-chat.md.
 
-\subsection{Use cases and where language belongs}
+\subsection{Language gaps and grounding}
 \label{sec:usecases}
 
-The domain expert's mandate was to decide where free language enters and leaves the system, which facts must come from the knowledge base, and what a wrong answer costs the passenger or SBB~\citep{h2task}. In FlightMode the team applied these questions to four SBB use cases. Automatic delay compensation (U2) needs no model, because its inputs are structured train data; rules alone suffice. A station chat (U1) does: passengers write in several languages and with names such as ``Züri'' that match no station, while the model alone cannot hold the knowledge base or ground its answers in it.
-
-The refund assistant follows the same split. Language enters as the passenger's message and leaves as the reply; the station, train, arrival times, delay, percentage and amount in between are facts or rules. A wrong ``yes'' costs SBB money, a wrong ``no'' costs the passenger money and SBB trust, so whatever the rules cannot settle goes to a person (P7). From this view the domain expert argued for the model as translator (P3) with critique and repair (P6), which the team combined with P1, P4 and P12~\citep{h2refundchat}.
+The domain expert's mandate was to decide where free language enters and leaves the system, which facts must come from the knowledge base, and what a wrong answer costs~\citep{h2task}. In FlightMode this left automatic delay compensation, with structured inputs, to rules alone. Of the five language gaps, the assistant closes questions (the message becomes slots), dialogue (it asks for missing or ambiguous details) and explanations (the verdict and its reason are worded), but not new text sources or rule maintenance: the only text is the message, and the policy is given. A wrong ``yes'' costs SBB money and a wrong ``no'' costs the passenger, so every value comes from the rules and whatever they cannot settle goes to a person~\citep{h2refundchat}.
 
 \subsection{Refund policy as rules}
 \label{sec:policy}
 
-The domain expert encoded the refund policy of Sheet 2~\citep{h2task} as FrameX rules in \texttt{47-refund-policy.fx}~\citep{h2policy}, on top of the delay that \texttt{46-refunds.fx} measures at the destination from the trains that really ran (Table~\ref{tab:policy}).
-
-\begin{table}[h]
-\centering
-\caption{Refund policy as derived by the rules. Money is stored in Rappen (integers).}
-\label{tab:policy}
-\begin{tabular}{lll}
-\toprule
-Delay at the destination & Derived facts & The reply names \\
-\midrule
-under 60 min & \texttt{notEntitled}, 0\,\% & the delay and the 60\,min threshold \\
-60 to 119 min & \texttt{entitled}, 25\,\% & the delay and 25\,\% \\
-120 min or more & \texttt{entitled}, 50\,\% & the delay and 50\,\% \\
-amount under CHF~5 & \texttt{entitled}, \texttt{paidOut} false & the CHF~5 minimum payout \\
-not measured, or day not in data & \texttt{handOff} with reason & the reason; customer service takes over \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-Three choices follow from the domain. Every number of the policy lives in one fact, \texttt{refundPolicy}, so each proof shows the threshold it used and no threshold appears in a prompt or in Python. ``Entitled but not paid out'' is kept apart from ``not entitled'': a passenger with CHF~4.90 due has a claim that only the minimum blocks. And the slot \texttt{dayOnRecord} is closed, so a journey on a day outside the data is handed on, while the rest of the knowledge base stays open-world. Twelve tests on constructed journeys cover the band edges (59/60 and 119/120 minutes), a missing price, a refund under CHF~5, an unmeasured arrival and a day outside the data; all 19 tests in \texttt{tests/test\_refunds.py} pass.
-
-\subsection{Language contract}
-\label{sec:contract}
-
-The contract in \texttt{docs/refund-chat.md} fixes what the model may return~\citep{h2refundchat}. Each slot (origin, destination, date, time, price, train) carries the passenger's own words, and the host accepts it only if the quote occurs in the message (P1). The prompt states the format and the meaning of each field, but no threshold, percentage, station list or delay arithmetic. Seven fixed critique reasons, such as \texttt{ambiguous\_station} (``Zürich'' matches 31 stations), go back to the model for one repair round, then to the passenger (P6). For each outcome the contract also lists what the reply must never say, for example ``you get CHF~4.90'' below the minimum, or a verdict in a hand-off. Policy, tests and contract were committed one hour into the open work, so the other roles built on one spec.
-
-\subsection{Checking the spec against the data}
-\label{sec:datacheck}
-
-The domain expert then checked the 7 November data against the policy. The largest arrival delay was 71 minutes; of 56,675 recorded arrivals, two were 60 or more minutes late and none 120 or more, so a 50\,\% refund arises only through a cancellation or a missed connection. The task's own example matched four departures within 30 minutes, all checked ones on time: the assistant must ask which train was meant, and the answer is no refund. The domain expert also built the chat with a live workflow graph that shows, for each model call and rule step, what was sent and what came back.
+The domain expert encoded the policy of Sheet~2 in \texttt{47-refund-policy.fx}~\citep{h2policy}, on top of the delay that \texttt{46-refunds.fx} measures at the destination: below 60 minutes no refund, from 60 minutes 25\,\%, from 120 minutes 50\,\%, no payout below CHF~5, and a hand-off with its reason when the arrival was not measured or the day is not in the data. Three choices follow from the domain. All policy numbers live in one fact, \texttt{refundPolicy}, so every proof shows its threshold and no threshold sits in a prompt or in Python. ``Entitled but not paid out'' stays apart from ``not entitled'': CHF~4.90 due is a claim that only the minimum blocks. And the slot \texttt{dayOnRecord} is closed, so a day outside the data is handed on while the rest of the knowledge base stays open-world. Twelve tests cover the band edges (59/60 and 119/120 minutes), a missing price, the minimum, an unmeasured arrival and a day outside the data. The language contract lists what a reply must never say, such as a verdict in a hand-off; policy, tests and contract were committed one hour into the open work, so all roles built on one spec~\citep{h2refundchat}. The domain expert also built the live workflow view, which shows what each model call and rule step sent and received.

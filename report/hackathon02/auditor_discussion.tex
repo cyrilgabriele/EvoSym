@@ -1,0 +1,5 @@
+% Cyril's discussion: evaluation limits and lessons learned.
+
+\subsection{Evaluation limits}
+
+Latency comes from a small sequential sample, not concurrent load; the judge scores are uncalibrated proxies, not deterministic checks; and the audit covers one operating day and journeys with at most one change. It cannot establish source-data accuracy, user satisfaction or repeated-run consistency~\citep{h2verification,h2evaluation}. \emph{Lessons learned:} only an oracle outside the system exposed the rounding gap, which also avoids Circular Evaluation~\citep{handschuh2026patterns}; audit evidence belongs where the checks run, since parsing the workflow view could invent approvals~\citep{h2adr0004}; and a judge other than GPT-5 mini, or a rule-based read-back, would remove the Self-Judge risk.

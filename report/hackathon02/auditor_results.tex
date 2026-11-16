@@ -1,0 +1,6 @@
+% Cyril's results. Sources: docs/cyril/evaluation-baseline.md; docs/cyril/evaluation-e2e.md.
+
+\subsection{Audit findings, correctness and latency}
+\label{sec:audit-results}
+
+The baseline exposed four rounding mismatches among 17 policy cases: production discarded fractional Rappen, while the agreed oracle compared the exact amount with the CHF~5 minimum and rounded only the displayed amount half-up, so 25\,\% of CHF~19.99 shows as CHF~5.00 but must not be paid. The final implementation matched all 17 policy cases~\citep{h2baseline,h2evaluation}. The recorded evaluation of 10 November reports 17 of 17 correct live conversations, all passing every instrumented invariant, and 9 of 9 dialogue and fault scenarios, two of them expected technical errors. Seven cases, including cancellation and missing arrival, also matched on the full FrameX workspace. The median live response took 16.6\,s and the 95th percentile 25.2\,s over 17 sequential requests, without judge time, and all 24 eligible replies were scored~\citep{h2verification}.
