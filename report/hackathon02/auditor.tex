@@ -12,19 +12,19 @@
 
 \subsection{Independent evaluation}
 
-I used the insights of Chapter~9, ``Validation and Measurement,'' of Michael Albada's \emph{Building Applications with AI Agents: Designing and Implementing Multiagent Systems} to guide the evaluation design~\citep[Chapter~9]{albada2025agents}. Following its distinction between component and holistic evaluation, I assessed rule correctness separately from complete conversations. I also included unexpected inputs and assessed reply quality alongside task outcomes.
+The auditor used the insights of Chapter~9, ``Validation and Measurement,'' of Michael Albada's \emph{Building Applications with AI Agents: Designing and Implementing Multiagent Systems} to guide the evaluation design~\citep[Chapter~9]{albada2025agents}. Following its distinction between component and holistic evaluation, the auditor assessed rule correctness separately from complete conversations. The evaluation also included unexpected inputs and assessed reply quality alongside task outcomes.
 
 The evaluator separates expected answers and scoring from the system under test. Its policy oracle calculates compensation independently in Python, while a journey oracle enumerates direct and one-change routes from the frozen SBB facts for 7 November 2026. FrameX results are compared with these expectations; they do not generate them. Snapshot hashes and route witnesses preserve the evidence behind each case. The conversation adapter invokes the same assistant as the user interface and supplies passenger messages without exposing expected answers or oracle-selected train identifiers~\citep{h2evaluation}.
 
 \subsection{Checks at the model boundaries}
 
-I checked the boundaries through structured events emitted where production validation, execution and acceptance occur. An execution passes the audit only if an earlier approval matches its operation and arguments. Accepted values must reference recorded evidence, and accepted passenger quotes must occur in the corresponding message. These checks establish traceability; quote occurrence alone does not establish that the model interpreted the words correctly.
+The auditor checked the boundaries through structured events emitted where production validation, execution and acceptance occur. An execution passes the audit only if an earlier approval matches its operation and arguments. Accepted values must reference recorded evidence, and accepted passenger quotes must occur in the corresponding message. These checks establish traceability; quote occurrence alone does not establish that the model interpreted the words correctly.
 
 The dialogue cases cover missing and ambiguous stations, an unsupported date, a rule-injection attempt, fabricated quotes, a corrected destination, exhausted repair, and model or tool timeouts. The evaluator checks the separate one-repair budgets for extraction and phrasing and whether the ticket price is requested at most once. Technical errors must remain errors, while clarification and handoff must carry no unsupported refund verdict. Missing execution or acceptance evidence is marked unverified. This prevents an early clarification from being counted as proof that later execution is safe~\citep{h2evaluation}.
 
 \subsection{Latency and reply-quality evaluation}
 
-I added latency evaluations to measure how long the assistant takes to answer, alongside correctness and guardrail checks. The evaluator uses a monotonic clock, reports the median and nearest-rank 95th percentile with sample counts, and separates initialization, first and subsequent requests, available model and engine stage timings, and quality-judge time. Recorded and injected model responses are excluded from live-performance aggregates; replay duration is not reported as assistant latency~\citep{h2evaluation}.
+The auditor added latency evaluations to measure how long the assistant takes to answer, alongside correctness and guardrail checks. The evaluator uses a monotonic clock, reports the median and nearest-rank 95th percentile with sample counts, and separates initialization, first and subsequent requests, available model and engine stage timings, and quality-judge time. Recorded and injected model responses are excluded from live-performance aggregates; replay duration is not reported as assistant latency~\citep{h2evaluation}.
 
 A separate GPT-5 mini judge scored relevance, clarity, coherence, evidence fidelity and actionability. Its scores remain separate from deterministic policy correctness~\citep{h2evaluation}.
 
