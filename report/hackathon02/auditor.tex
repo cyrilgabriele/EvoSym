@@ -1,0 +1,53 @@
+% Cyril's contribution. Sources are in the sibling hybridai-hackathon02 repository.
+% Mandate: docs/cyril/mandate.md.
+% Methods: docs/evaluation.md; src/eval/; tests/eval/;
+% docs/adrs/0003_refund_evaluation.md and 0004_conversation_evaluation.md.
+% Historical finding: docs/cyril/evaluation-baseline.md.
+% Final results: docs/cyril/evaluation-e2e.md;
+% config/eval/verification.yaml; eval-results/e2e-snapshot/summary.md;
+% eval-results/e2e-dialogue/summary.md; eval-results/policy-integrated/summary.md.
+
+\section{Methods}
+\label{sec:methods}
+
+\subsection{Independent evaluation}
+
+I used the insights of Chapter~9, ``Validation and Measurement,'' of Michael Albada's \emph{Building Applications with AI Agents: Designing and Implementing Multiagent Systems} to guide the evaluation design~\citep[Chapter~9]{albada2025agents}. Following its distinction between component and holistic evaluation, I assessed rule correctness separately from complete conversations. I also included unexpected inputs and assessed reply quality alongside task outcomes.
+
+The evaluator separates expected answers and scoring from the system under test. Its policy oracle calculates compensation independently in Python, while a journey oracle enumerates direct and one-change routes from the frozen SBB facts for 7 November 2026. FrameX results are compared with these expectations; they do not generate them. Snapshot hashes and route witnesses preserve the evidence behind each case. The conversation adapter invokes the same assistant as the user interface and supplies passenger messages without exposing expected answers or oracle-selected train identifiers~\citep{h2evaluation}.
+
+\subsection{Checks at the model boundaries}
+
+I checked the boundaries through structured events emitted where production validation, execution and acceptance occur. An execution passes the audit only if an earlier approval matches its operation and arguments. Accepted values must reference recorded evidence, and accepted passenger quotes must occur in the corresponding message. These checks establish traceability; quote occurrence alone does not establish that the model interpreted the words correctly.
+
+The dialogue cases cover missing and ambiguous stations, an unsupported date, a rule-injection attempt, fabricated quotes, a corrected destination, exhausted repair, and model or tool timeouts. The evaluator checks the separate one-repair budgets for extraction and phrasing and whether the ticket price is requested at most once. Technical errors must remain errors, while clarification and handoff must carry no unsupported refund verdict. Missing execution or acceptance evidence is marked unverified. This prevents an early clarification from being counted as proof that later execution is safe~\citep{h2evaluation}.
+
+\subsection{Latency and reply-quality evaluation}
+
+I added latency evaluations to measure how long the assistant takes to answer, alongside correctness and guardrail checks. The evaluator uses a monotonic clock, reports the median and nearest-rank 95th percentile with sample counts, and separates initialization, first and subsequent requests, available model and engine stage timings, and quality-judge time. Recorded and injected model responses are excluded from live-performance aggregates; replay duration is not reported as assistant latency~\citep{h2evaluation}.
+
+A separate GPT-5 mini judge scored relevance, clarity, coherence, evidence fidelity and actionability. Its scores remain separate from deterministic policy correctness~\citep{h2evaluation}.
+
+\section{Results}
+\label{sec:results}
+
+\subsection{Audit findings and correctness}
+
+The baseline exposed four rounding mismatches among 17 policy cases. Production discarded fractional Rappen, while the agreed oracle rounded the displayed amount half-up after comparing the exact compensation with the CHF~5 payout minimum. For example, 25\% of CHF~19.99 displays as CHF~5.00, but the exact amount is below the minimum and must not be paid. The final implementation matched all 17 policy cases. This is an explicit project convention: the supplied policy sheet did not settle fractional-cent rounding~\citep{h2baseline,h2evaluation}.
+
+The recorded evaluation on 10 November 2026 reports 17 of 17 correct live snapshot conversations and nine of nine correct dialogue and fault scenarios, including two expected technical errors. All 17 snapshot conversations passed every instrumented invariant. Seven representative cases also matched the independent expectations against the complete FrameX workspace, covering cancellation, missed connections, changed transfer routes, missing actual arrival, and the 0\%, 25\% and 50\% outcomes~\citep{h2verification}.
+
+\subsection{Latency and reply quality}
+
+The live snapshot response median was 16.6\,s and the nearest-rank 95th percentile was 25.2\,s across 17 sequential requests, excluding judge time. All 24 eligible replies across the snapshot and dialogue corpora received quality scores without judge errors~\citep{h2verification}.
+
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Evaluation limits}
+
+The rounding finding shows why independent expectations matter: agreement with the production rules alone would not have exposed the different monetary conventions. The latency evaluation complements correctness by making response time visible, but the small sequential sample does not establish acceptable latency for users or performance under concurrent demand.
+
+The judge scores are automated quality proxies with no calibrated pass threshold; they cannot replace deterministic correctness checks or establish user satisfaction. Using GPT-5 mini for both assistant and judge also limits the independence of this assessment~\citep{h2verification,h2evaluation}.
+
+The audit covers one operating-day snapshot and bounded journeys with at most one change. It cannot establish source-data accuracy, repeated-run consistency or load performance. Injected and recorded model responses were excluded from live latency aggregates. The results support the tested decisions and protections, while leaving behavior outside those cases unverified~\citep{h2verification}.

@@ -1,0 +1,45 @@
+\documentclass[10pt]{article}
+% TMLR style (https://github.com/JmlrOrg/tmlr-style-file).
+% [preprint] shows the author names and drops the "Under review as submission to TMLR" header.
+\usepackage[preprint]{tmlr}
+
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage{booktabs}
+
+\title{EvoSym: Evolvable Neuro-Symbolic Intelligence}
+
+% Separate authors with \AND.
+\author{\name Gian Seifert \\
+      \addr University of St.\ Gallen
+      \AND
+      \name Cyril Gabriele \\
+      \addr University of St.\ Gallen
+      \AND
+      \name Filipp Rechsteiner \\
+      \addr University of St.\ Gallen}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+TODO
+\end{abstract}
+
+\section{Introduction}
+\label{sec:introduction}
+
+% Auditor's introduction; the team can extend this with the overall project context.
+The Hackathon~2 refund assistant combines language-model interpretation with FrameX decisions. As the auditor, my mandate was to check that the model could not execute unchecked rules or queries, that acceptance depended on evidence, and that the system protected the course's five invariants: model output remains data, answers are dated and replayable, rules decide, evidence governs acceptance, and failure states remain distinct. I built an independent evaluator covering both the FrameX decisions and the passenger-facing conversation~\citep{h2evaluation}.
+
+\input{auditor}
+
+\bibliography{references}
+\bibliographystyle{tmlr}
+
+\appendix
+\section{Appendix}
+
+\end{document}
